@@ -1,9 +1,31 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="false" userDefinedModelVersionIdentifier="">
-    <entity name="Item" representedClassName="Item" syncable="YES" codeGenerationType="class">
-        <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22757" systemVersion="23E224" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="PhotoAsset" representedClassName="PhotoAsset" syncable="YES" codeGenerationType="class" renamingIdentifier="ClassifiedImage">
+        <attribute name="city" optional="YES" attributeType="String"/>
+        <attribute name="classificationConfidence" optional="NO" attributeType="Double" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="classificationError" optional="YES" attributeType="String"/>
+        <attribute name="classificationLabel" optional="YES" attributeType="String" renamingIdentifier="category"/>
+        <attribute name="classificationState" optional="NO" attributeType="Integer 16" defaultValueString="2" usesScalarValueType="YES"/>
+        <attribute name="country" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" renamingIdentifier="timestamp"/>
+        <attribute name="fileName" optional="NO" attributeType="String" renamingIdentifier="imageName"/>
+        <attribute name="geocodingState" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="hasGPSData" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="latitude" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="locationName" optional="YES" attributeType="String"/>
+        <attribute name="longitude" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="locationPredictionState" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="note" optional="YES" attributeType="String"/>
+        <attribute name="originalFilename" optional="YES" attributeType="String"/>
+        <attribute name="predictedLocation" optional="YES" attributeType="String"/>
+        <attribute name="predictedLocationConfidence" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <relationship name="tags" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Tag" inverseName="photos" inverseEntity="Tag"/>
     </entity>
-    <elements>
-        <element name="Item" positionX="-63" positionY="-18" width="128" height="44"/>
-    </elements>
+    <entity name="Tag" representedClassName="Tag" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="NO" attributeType="String"/>
+        <relationship name="photos" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PhotoAsset" inverseName="tags" inverseEntity="PhotoAsset"/>
+    </entity>
 </model>

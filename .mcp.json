@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "xcodebuild": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "xcodebuild-mcp@latest"
+      ],
+      "env": {}
+    },
+    "apple-docs": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "apple-docs-mcp@latest"
+      ],
+      "env": {}
+    },
+    "xcode-server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "xcode-mcp-server@latest"
+      ],
+      "env": {}
+    }
+  }
+}

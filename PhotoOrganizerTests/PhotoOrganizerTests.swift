@@ -5,31 +5,49 @@
 //  Created by Shinuk Yi on 5/12/24.
 //
 
+import CoreGraphics
 import XCTest
+@testable import PhotoOrganizer
 
 final class PhotoOrganizerTests: XCTestCase {
+    func testPhotoFileStoreSaveLoadDelete() throws {
+        let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let store = PhotoFileStore(baseURL: tempDirectory)
 
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+        let image = makeTestImage()
+        let fileName = try store.saveImage(image, id: UUID())
+
+        XCTAssertNotNil(store.loadImage(named: fileName))
+
+        try store.deleteImage(named: fileName)
+        XCTAssertNil(store.loadImage(named: fileName))
     }
 
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
+    private func makeTestImage() -> PlatformImage {
+        let width = 4
+        let height = 4
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bytesPerRow = width * 4
 
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
-    }
-
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        measure {
-            // Put the code you want to measure the time of here.
+        guard let context = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            preconditionFailure("Failed to create CGContext.")
         }
-    }
 
+        context.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+
+        guard let cgImage = context.makeImage() else {
+            preconditionFailure("Failed to create CGImage.")
+        }
+
+        return PlatformImage.from(cgImage: cgImage)
+    }
 }

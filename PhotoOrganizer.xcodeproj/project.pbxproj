@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CC0001012F2500010029267F /* GridColumnPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0001002F2500010029267F /* GridColumnPicker.swift */; };
+		CC0002012F2500020029267F /* ConfidenceBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0002002F2500020029267F /* ConfidenceBadge.swift */; };
+		CC0003012F2500030029267F /* ClassificationHeroCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0003002F2500030029267F /* ClassificationHeroCard.swift */; };
 		476E42362BF0941D0029267F /* PhotoOrganizerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 476E42352BF0941D0029267F /* PhotoOrganizerApp.swift */; };
 		476E42382BF0941D0029267F /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 476E42372BF0941D0029267F /* Persistence.swift */; };
 		476E423B2BF0941D0029267F /* PhotoOrganizer.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 476E42392BF0941D0029267F /* PhotoOrganizer.xcdatamodeld */; };
@@ -16,6 +19,34 @@
 		476E424D2BF094200029267F /* PhotoOrganizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 476E424C2BF094200029267F /* PhotoOrganizerTests.swift */; };
 		476E42572BF094200029267F /* PhotoOrganizerUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 476E42562BF094200029267F /* PhotoOrganizerUITests.swift */; };
 		476E42592BF094200029267F /* PhotoOrganizerUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 476E42582BF094200029267F /* PhotoOrganizerUITestsLaunchTests.swift */; };
+		47C2536D2F245E0900810F9A /* ExtendedTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47C2536B2F245E0900810F9A /* ExtendedTokens.swift */; };
+		47C2536E2F245E0900810F9A /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47C2536C2F245E0900810F9A /* ThemeManager.swift */; };
+		47C2537C2F245E7200810F9A /* Toast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47C253712F245E7200810F9A /* Toast.swift */; };
+		47C2537D2F245E7200810F9A /* AutoSaveIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47C2536F2F245E7200810F9A /* AutoSaveIndicator.swift */; };
+		47C2537E2F245E7200810F9A /* ZoomableImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47C2537A2F245E7200810F9A /* ZoomableImageView.swift */; };
+		47C2537F2F245E7200810F9A /* CategoryChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47C253732F245E7200810F9A /* CategoryChip.swift */; };
+		47C253802F245E7200810F9A /* WaterfallGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47C253762F245E7200810F9A /* WaterfallGrid.swift */; };
+		47C253812F245E7200810F9A /* CategoryFilterBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47C253742F245E7200810F9A /* CategoryFilterBar.swift */; };
+		47C253822F245E7200810F9A /* GridLoadingOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47C253702F245E7200810F9A /* GridLoadingOverlay.swift */; };
+		47C253832F245E7200810F9A /* ShimmerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47C253782F245E7200810F9A /* ShimmerView.swift */; };
+		AA0001012C0000010029267F /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0001002C0000010029267F /* ImagePicker.swift */; };
+		AA0002012C0000020029267F /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0002002C0000020029267F /* DesignTokens.swift */; };
+		AA0002032C0000020029267F /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0002022C0000020029267F /* Typography.swift */; };
+		AA0002052C0000020029267F /* CardModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0002042C0000020029267F /* CardModifier.swift */; };
+		AA0002072C0000020029267F /* ButtonStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0002062C0000020029267F /* ButtonStyles.swift */; };
+		AA0003012C0000030029267F /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0003002C0000030029267F /* PrimaryButton.swift */; };
+		AA0003032C0000030029267F /* IconButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0003022C0000030029267F /* IconButton.swift */; };
+		AA0003052C0000030029267F /* TagChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0003042C0000030029267F /* TagChip.swift */; };
+		AA0003072C0000030029267F /* PhotoCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0003062C0000030029267F /* PhotoCard.swift */; };
+		AA0003092C0000030029267F /* SectionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0003082C0000030029267F /* SectionCard.swift */; };
+		AA00030B2C0000030029267F /* InputField.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00030A2C0000030029267F /* InputField.swift */; };
+		AA00030D2C0000030029267F /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00030C2C0000030029267F /* EmptyStateView.swift */; };
+		AA00030F2C0000030029267F /* LoadingStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00030E2C0000030029267F /* LoadingStateView.swift */; };
+		AA0003112C0000030029267F /* ErrorStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0003102C0000030029267F /* ErrorStateView.swift */; };
+		AA0004012C0000040029267F /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0004002C0000040029267F /* LibraryView.swift */; };
+		AA0004032C0000040029267F /* PhotoGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0004022C0000040029267F /* PhotoGridView.swift */; };
+		AA0004052C0000040029267F /* PhotoDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0004042C0000040029267F /* PhotoDetailView.swift */; };
+		BB0005012C0000500029267F /* MyImageClassifier.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = BB0005002C0000500029267F /* MyImageClassifier.mlmodel */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,6 +67,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		CC0001002F2500010029267F /* GridColumnPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GridColumnPicker.swift; sourceTree = "<group>"; };
+		CC0002002F2500020029267F /* ConfidenceBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfidenceBadge.swift; sourceTree = "<group>"; };
+		CC0003002F2500030029267F /* ClassificationHeroCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassificationHeroCard.swift; sourceTree = "<group>"; };
 		476E42322BF0941D0029267F /* PhotoOrganizer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhotoOrganizer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		476E42352BF0941D0029267F /* PhotoOrganizerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoOrganizerApp.swift; sourceTree = "<group>"; };
 		476E42372BF0941D0029267F /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
@@ -49,6 +83,34 @@
 		476E42522BF094200029267F /* PhotoOrganizerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PhotoOrganizerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		476E42562BF094200029267F /* PhotoOrganizerUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoOrganizerUITests.swift; sourceTree = "<group>"; };
 		476E42582BF094200029267F /* PhotoOrganizerUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoOrganizerUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		47C2536B2F245E0900810F9A /* ExtendedTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtendedTokens.swift; sourceTree = "<group>"; };
+		47C2536C2F245E0900810F9A /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		47C2536F2F245E7200810F9A /* AutoSaveIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoSaveIndicator.swift; sourceTree = "<group>"; };
+		47C253702F245E7200810F9A /* GridLoadingOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GridLoadingOverlay.swift; sourceTree = "<group>"; };
+		47C253712F245E7200810F9A /* Toast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toast.swift; sourceTree = "<group>"; };
+		47C253732F245E7200810F9A /* CategoryChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryChip.swift; sourceTree = "<group>"; };
+		47C253742F245E7200810F9A /* CategoryFilterBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryFilterBar.swift; sourceTree = "<group>"; };
+		47C253762F245E7200810F9A /* WaterfallGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterfallGrid.swift; sourceTree = "<group>"; };
+		47C253782F245E7200810F9A /* ShimmerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerView.swift; sourceTree = "<group>"; };
+		47C2537A2F245E7200810F9A /* ZoomableImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoomableImageView.swift; sourceTree = "<group>"; };
+		AA0001002C0000010029267F /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
+		AA0002002C0000020029267F /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
+		AA0002022C0000020029267F /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
+		AA0002042C0000020029267F /* CardModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardModifier.swift; sourceTree = "<group>"; };
+		AA0002062C0000020029267F /* ButtonStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonStyles.swift; sourceTree = "<group>"; };
+		AA0003002C0000030029267F /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
+		AA0003022C0000030029267F /* IconButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconButton.swift; sourceTree = "<group>"; };
+		AA0003042C0000030029267F /* TagChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagChip.swift; sourceTree = "<group>"; };
+		AA0003062C0000030029267F /* PhotoCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoCard.swift; sourceTree = "<group>"; };
+		AA0003082C0000030029267F /* SectionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionCard.swift; sourceTree = "<group>"; };
+		AA00030A2C0000030029267F /* InputField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputField.swift; sourceTree = "<group>"; };
+		AA00030C2C0000030029267F /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
+		AA00030E2C0000030029267F /* LoadingStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingStateView.swift; sourceTree = "<group>"; };
+		AA0003102C0000030029267F /* ErrorStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorStateView.swift; sourceTree = "<group>"; };
+		AA0004002C0000040029267F /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		AA0004022C0000040029267F /* PhotoGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoGridView.swift; sourceTree = "<group>"; };
+		AA0004042C0000040029267F /* PhotoDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoDetailView.swift; sourceTree = "<group>"; };
+		BB0005002C0000500029267F /* MyImageClassifier.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = MyImageClassifier.mlmodel; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +164,11 @@
 				476E42352BF0941D0029267F /* PhotoOrganizerApp.swift */,
 				476E42372BF0941D0029267F /* Persistence.swift */,
 				476E423C2BF0941D0029267F /* ContentView.swift */,
+				AA0001002C0000010029267F /* ImagePicker.swift */,
+				BB0005002C0000500029267F /* MyImageClassifier.mlmodel */,
+				AA0010002C0000100029267F /* DesignSystem */,
+				AA0011002C0000110029267F /* Components */,
+				AA0012002C0000120029267F /* Features */,
 				476E423E2BF094200029267F /* Assets.xcassets */,
 				476E42402BF094200029267F /* PhotoOrganizer.entitlements */,
 				476E42392BF0941D0029267F /* PhotoOrganizer.xcdatamodeld */,
@@ -133,6 +200,168 @@
 				476E42582BF094200029267F /* PhotoOrganizerUITestsLaunchTests.swift */,
 			);
 			path = PhotoOrganizerUITests;
+			sourceTree = "<group>";
+		};
+		47C253722F245E7200810F9A /* Feedback */ = {
+			isa = PBXGroup;
+			children = (
+				47C2536F2F245E7200810F9A /* AutoSaveIndicator.swift */,
+				47C253702F245E7200810F9A /* GridLoadingOverlay.swift */,
+				47C253712F245E7200810F9A /* Toast.swift */,
+			);
+			path = Feedback;
+			sourceTree = "<group>";
+		};
+		47C253752F245E7200810F9A /* Filters */ = {
+			isa = PBXGroup;
+			children = (
+				47C253732F245E7200810F9A /* CategoryChip.swift */,
+				47C253742F245E7200810F9A /* CategoryFilterBar.swift */,
+			);
+			path = Filters;
+			sourceTree = "<group>";
+		};
+		47C253772F245E7200810F9A /* Grid */ = {
+			isa = PBXGroup;
+			children = (
+				47C253762F245E7200810F9A /* WaterfallGrid.swift */,
+			);
+			path = Grid;
+			sourceTree = "<group>";
+		};
+		47C253792F245E7200810F9A /* Loading */ = {
+			isa = PBXGroup;
+			children = (
+				47C253782F245E7200810F9A /* ShimmerView.swift */,
+			);
+			path = Loading;
+			sourceTree = "<group>";
+		};
+		47C2537B2F245E7200810F9A /* Media */ = {
+			isa = PBXGroup;
+			children = (
+				47C2537A2F245E7200810F9A /* ZoomableImageView.swift */,
+			);
+			path = Media;
+			sourceTree = "<group>";
+		};
+		AA0010002C0000100029267F /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				47C2536B2F245E0900810F9A /* ExtendedTokens.swift */,
+				47C2536C2F245E0900810F9A /* ThemeManager.swift */,
+				AA0002002C0000020029267F /* DesignTokens.swift */,
+				AA0002022C0000020029267F /* Typography.swift */,
+				AA0010012C0000100029267F /* ViewModifiers */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		AA0010012C0000100029267F /* ViewModifiers */ = {
+			isa = PBXGroup;
+			children = (
+				AA0002042C0000020029267F /* CardModifier.swift */,
+				AA0002062C0000020029267F /* ButtonStyles.swift */,
+			);
+			path = ViewModifiers;
+			sourceTree = "<group>";
+		};
+		CC0010002F2500100029267F /* Controls */ = {
+			isa = PBXGroup;
+			children = (
+				CC0001002F2500010029267F /* GridColumnPicker.swift */,
+			);
+			path = Controls;
+			sourceTree = "<group>";
+		};
+		CC0020002F2500200029267F /* Badges */ = {
+			isa = PBXGroup;
+			children = (
+				CC0002002F2500020029267F /* ConfidenceBadge.swift */,
+			);
+			path = Badges;
+			sourceTree = "<group>";
+		};
+		AA0011002C0000110029267F /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				CC0020002F2500200029267F /* Badges */,
+				AA0011012C0000110029267F /* Buttons */,
+				AA0011022C0000110029267F /* Cards */,
+				CC0010002F2500100029267F /* Controls */,
+				AA0011032C0000110029267F /* Forms */,
+				AA0011042C0000110029267F /* States */,
+				47C253722F245E7200810F9A /* Feedback */,
+				47C253752F245E7200810F9A /* Filters */,
+				47C253772F245E7200810F9A /* Grid */,
+				47C253792F245E7200810F9A /* Loading */,
+				47C2537B2F245E7200810F9A /* Media */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		AA0011012C0000110029267F /* Buttons */ = {
+			isa = PBXGroup;
+			children = (
+				AA0003002C0000030029267F /* PrimaryButton.swift */,
+				AA0003022C0000030029267F /* IconButton.swift */,
+				AA0003042C0000030029267F /* TagChip.swift */,
+			);
+			path = Buttons;
+			sourceTree = "<group>";
+		};
+		AA0011022C0000110029267F /* Cards */ = {
+			isa = PBXGroup;
+			children = (
+				CC0003002F2500030029267F /* ClassificationHeroCard.swift */,
+				AA0003062C0000030029267F /* PhotoCard.swift */,
+				AA0003082C0000030029267F /* SectionCard.swift */,
+			);
+			path = Cards;
+			sourceTree = "<group>";
+		};
+		AA0011032C0000110029267F /* Forms */ = {
+			isa = PBXGroup;
+			children = (
+				AA00030A2C0000030029267F /* InputField.swift */,
+			);
+			path = Forms;
+			sourceTree = "<group>";
+		};
+		AA0011042C0000110029267F /* States */ = {
+			isa = PBXGroup;
+			children = (
+				AA00030C2C0000030029267F /* EmptyStateView.swift */,
+				AA00030E2C0000030029267F /* LoadingStateView.swift */,
+				AA0003102C0000030029267F /* ErrorStateView.swift */,
+			);
+			path = States;
+			sourceTree = "<group>";
+		};
+		AA0012002C0000120029267F /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				AA0012012C0000120029267F /* Library */,
+				AA0012022C0000120029267F /* PhotoDetail */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		AA0012012C0000120029267F /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				AA0004002C0000040029267F /* LibraryView.swift */,
+				AA0004022C0000040029267F /* PhotoGridView.swift */,
+			);
+			path = Library;
+			sourceTree = "<group>";
+		};
+		AA0012022C0000120029267F /* PhotoDetail */ = {
+			isa = PBXGroup;
+			children = (
+				AA0004042C0000040029267F /* PhotoDetailView.swift */,
+			);
+			path = PhotoDetail;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -265,10 +494,41 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CC0001012F2500010029267F /* GridColumnPicker.swift in Sources */,
+				CC0002012F2500020029267F /* ConfidenceBadge.swift in Sources */,
+				CC0003012F2500030029267F /* ClassificationHeroCard.swift in Sources */,
 				476E42362BF0941D0029267F /* PhotoOrganizerApp.swift in Sources */,
 				476E423B2BF0941D0029267F /* PhotoOrganizer.xcdatamodeld in Sources */,
 				476E423D2BF0941D0029267F /* ContentView.swift in Sources */,
 				476E42382BF0941D0029267F /* Persistence.swift in Sources */,
+				AA0001012C0000010029267F /* ImagePicker.swift in Sources */,
+				AA0002012C0000020029267F /* DesignTokens.swift in Sources */,
+				AA0002032C0000020029267F /* Typography.swift in Sources */,
+				AA0002052C0000020029267F /* CardModifier.swift in Sources */,
+				AA0002072C0000020029267F /* ButtonStyles.swift in Sources */,
+				AA0003012C0000030029267F /* PrimaryButton.swift in Sources */,
+				AA0003032C0000030029267F /* IconButton.swift in Sources */,
+				AA0003052C0000030029267F /* TagChip.swift in Sources */,
+				AA0003072C0000030029267F /* PhotoCard.swift in Sources */,
+				AA0003092C0000030029267F /* SectionCard.swift in Sources */,
+				47C2537C2F245E7200810F9A /* Toast.swift in Sources */,
+				47C2537D2F245E7200810F9A /* AutoSaveIndicator.swift in Sources */,
+				47C2537E2F245E7200810F9A /* ZoomableImageView.swift in Sources */,
+				47C2537F2F245E7200810F9A /* CategoryChip.swift in Sources */,
+				47C253802F245E7200810F9A /* WaterfallGrid.swift in Sources */,
+				47C253812F245E7200810F9A /* CategoryFilterBar.swift in Sources */,
+				47C253822F245E7200810F9A /* GridLoadingOverlay.swift in Sources */,
+				47C253832F245E7200810F9A /* ShimmerView.swift in Sources */,
+				AA00030B2C0000030029267F /* InputField.swift in Sources */,
+				AA00030D2C0000030029267F /* EmptyStateView.swift in Sources */,
+				AA00030F2C0000030029267F /* LoadingStateView.swift in Sources */,
+				AA0003112C0000030029267F /* ErrorStateView.swift in Sources */,
+				AA0004012C0000040029267F /* LibraryView.swift in Sources */,
+				47C2536D2F245E0900810F9A /* ExtendedTokens.swift in Sources */,
+				47C2536E2F245E0900810F9A /* ThemeManager.swift in Sources */,
+				AA0004032C0000040029267F /* PhotoGridView.swift in Sources */,
+				AA0004052C0000040029267F /* PhotoDetailView.swift in Sources */,
+				BB0005012C0000500029267F /* MyImageClassifier.mlmodel in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
