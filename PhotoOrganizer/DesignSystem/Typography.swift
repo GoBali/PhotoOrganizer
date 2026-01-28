@@ -17,6 +17,8 @@ enum Typography {
     case title3
     /// Card titles, buttons - .headline
     case headline
+    /// Subheadline - .subheadline.weight(.medium)
+    case subheadline
     /// Body text - .body
     case body
     /// Description text - .callout
@@ -34,6 +36,8 @@ enum Typography {
             return .title3.weight(.semibold)
         case .headline:
             return .headline
+        case .subheadline:
+            return .subheadline.weight(.medium)
         case .body:
             return .body
         case .callout:

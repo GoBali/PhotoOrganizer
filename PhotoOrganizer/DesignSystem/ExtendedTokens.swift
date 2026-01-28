@@ -148,6 +148,8 @@ enum HapticStyle {
     case light
     case medium
     case heavy
+    case soft
+    case rigid
     case success
     case warning
     case error
@@ -162,6 +164,10 @@ enum HapticStyle {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         case .heavy:
             UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+        case .soft:
+            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        case .rigid:
+            UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
         case .success:
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         case .warning:

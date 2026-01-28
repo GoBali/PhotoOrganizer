@@ -13,35 +13,41 @@ struct PhotoCard: View {
     let location: String?
     let status: PhotoCardStatus
     let isLoading: Bool
+    let showInfo: Bool
 
     #if os(macOS)
     @State private var isHovered = false
     #endif
-    @State private var isPressed = false
 
     init(
         image: Image?,
         label: String,
         location: String? = nil,
         status: PhotoCardStatus = .none,
-        isLoading: Bool = false
+        isLoading: Bool = false,
+        showInfo: Bool = true
     ) {
         self.image = image
         self.label = label
         self.location = location
         self.status = status
         self.isLoading = isLoading
+        self.showInfo = showInfo
     }
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             // Image or placeholder
             imageContent
-                .frame(minHeight: 100)
+                #if os(macOS)
+                .frame(minHeight: 100)  // macOS: 기존 높이
+                #endif
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous))
 
-            // Glassmorphism overlay
-            glassOverlay
+            // Glassmorphism overlay (조건부: showInfo가 true일 때만 표시)
+            if showInfo {
+                glassOverlay
+            }
         }
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous))
         .elevation(currentElevation)
@@ -51,23 +57,8 @@ struct PhotoCard: View {
         .onHover { hovering in
             isHovered = hovering
         }
-        #else
-        .scaleEffect(isPressed ? 0.96 : 1.0)
-        .brightness(isPressed ? -0.03 : 0)
-        .animation(Motion.springStiff(), value: isPressed)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    if !isPressed {
-                        isPressed = true
-                        HapticStyle.light.trigger()
-                    }
-                }
-                .onEnded { _ in
-                    isPressed = false
-                }
-        )
         #endif
+        // iOS: DragGesture 제거 - ButtonStyle에서 피드백 처리
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Photo: \(label)")
         .accessibilityHint("Double tap to view details")
@@ -80,9 +71,22 @@ struct PhotoCard: View {
     @ViewBuilder
     private var imageContent: some View {
         if let image {
+            #if os(iOS)
+            // iOS: 4:3 비율 컨테이너에 이미지를 중앙 정렬하여 채움
+            Color.clear
+                .aspectRatio(4/3, contentMode: .fit)
+                .overlay {
+                    image
+                        .resizable()
+                        .scaledToFill()
+                }
+                .clipped()
+            #else
+            // macOS: 기존 fit 모드 유지
             image
                 .resizable()
                 .aspectRatio(contentMode: .fit)
+            #endif
         } else {
             Rectangle()
                 .fill(Color.ds.surfaceSecondary)
@@ -243,106 +247,69 @@ enum PhotoCardStatus: Equatable {
     case completed(confidence: Double)
     case failed
 
-    var text: String {
+    /// 상태별 스타일 정보를 통합 제공
+    var style: StatusStyle {
         switch self {
         case .none:
-            return ""
+            return StatusStyle(
+                text: "",
+                backgroundColor: .clear,
+                textColor: .clear,
+                icon: nil,
+                accessibilityText: ""
+            )
         case .pending:
-            return "Pending"
+            return StatusStyle(
+                text: "Pending",
+                backgroundColor: Color.ds.warningBackground,
+                textColor: Color.ds.warning,
+                icon: "clock",
+                accessibilityText: "Classification pending"
+            )
         case .processing:
-            return "Classifying"
+            return StatusStyle(
+                text: "Classifying",
+                backgroundColor: Color.ds.secondary.opacity(0.2),
+                textColor: Color.ds.secondary,
+                icon: "arrow.triangle.2.circlepath",
+                accessibilityText: "Classification in progress"
+            )
         case .completed(let confidence):
-            return String(format: "%.0f%%", confidence * 100)
+            return StatusStyle(
+                text: String(format: "%.0f%%", confidence * 100),
+                backgroundColor: Color.ds.successBackground,
+                textColor: Color.ds.success,
+                icon: "checkmark.circle.fill",
+                accessibilityText: "Classified with \(Int(confidence * 100))% confidence"
+            )
         case .failed:
-            return "Failed"
+            return StatusStyle(
+                text: "Failed",
+                backgroundColor: Color.ds.errorBackground,
+                textColor: Color.ds.error,
+                icon: "exclamationmark.circle.fill",
+                accessibilityText: "Classification failed"
+            )
         }
     }
 
-    var backgroundColor: Color {
-        switch self {
-        case .none:
-            return .clear
-        case .pending:
-            return Color.ds.warningBackground
-        case .processing:
-            return Color.ds.secondary.opacity(0.2)
-        case .completed:
-            return Color.ds.successBackground
-        case .failed:
-            return Color.ds.errorBackground
-        }
-    }
+    // MARK: - Convenience Accessors (style 통해 접근)
 
-    var textColor: Color {
-        switch self {
-        case .none:
-            return .clear
-        case .pending:
-            return Color.ds.warning
-        case .processing:
-            return Color.ds.secondary
-        case .completed:
-            return Color.ds.success
-        case .failed:
-            return Color.ds.error
-        }
-    }
-
-    var icon: String? {
-        switch self {
-        case .none: return nil
-        case .pending: return "clock"
-        case .processing: return "arrow.triangle.2.circlepath"
-        case .completed: return "checkmark.circle.fill"
-        case .failed: return "exclamationmark.circle.fill"
-        }
-    }
-
-    var accessibilityText: String {
-        switch self {
-        case .none: return ""
-        case .pending: return "Classification pending"
-        case .processing: return "Classification in progress"
-        case .completed(let confidence): return "Classified with \(Int(confidence * 100))% confidence"
-        case .failed: return "Classification failed"
-        }
-    }
+    var text: String { style.text }
+    var backgroundColor: Color { style.backgroundColor }
+    var textColor: Color { style.textColor }
+    var icon: String? { style.icon }
+    var accessibilityText: String { style.accessibilityText }
 }
 
-// MARK: - Legacy Status Badge (for backwards compatibility)
+// MARK: - Status Style
 
-struct PhotoCardStatusBadge: View {
-    let status: PhotoCardStatus
-
-    var body: some View {
-        if status != .none {
-            HStack(spacing: Spacing.space1) {
-                if let icon = status.icon {
-                    if status == .processing {
-                        Image(systemName: icon)
-                            .font(.system(size: IconSize.tiny, weight: .medium))
-                            .rotationEffect(.degrees(status == .processing ? 360 : 0))
-                            .animation(
-                                status == .processing
-                                    ? .linear(duration: 1.0).repeatForever(autoreverses: false)
-                                    : .default,
-                                value: status
-                            )
-                    } else {
-                        Image(systemName: icon)
-                            .font(.system(size: IconSize.tiny, weight: .medium))
-                    }
-                }
-                Text(status.text)
-                    .font(.caption2.weight(.medium))
-            }
-            .foregroundStyle(status.textColor)
-            .padding(.horizontal, Spacing.space2)
-            .padding(.vertical, Spacing.space1)
-            .background(status.backgroundColor)
-            .clipShape(Capsule())
-        }
-    }
+struct StatusStyle {
+    let text: String
+    let backgroundColor: Color
+    let textColor: Color
+    let icon: String?
+    let accessibilityText: String
 }
 
 // MARK: - Preview

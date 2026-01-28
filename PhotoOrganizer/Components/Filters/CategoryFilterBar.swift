@@ -10,29 +10,54 @@ import SwiftUI
 struct CategoryFilterBar: View {
     let categories: [CategoryItem]
     @Binding var selectedCategory: String
+    var showIcons: Bool = false
 
-    init(categories: [CategoryItem], selectedCategory: Binding<String>) {
+    init(categories: [CategoryItem], selectedCategory: Binding<String>, showIcons: Bool = false) {
         self.categories = categories
         self._selectedCategory = selectedCategory
+        self.showIcons = showIcons
     }
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Spacing.space2) {
                 ForEach(categories) { category in
-                    CategoryChip(
-                        category.name,
-                        count: category.count,
-                        isSelected: selectedCategory == category.name
-                    ) {
-                        withAnimation(.easeInOut(duration: AnimationDuration.fast)) {
-                            selectedCategory = category.name
-                        }
-                    }
+                    categoryChip(for: category)
                 }
             }
-            .padding(.horizontal, Spacing.space4)
+            #if os(iOS)
+            .padding(.horizontal, Spacing.space2)  // iOS: 8pt (더 많은 필터 표시)
+            #else
+            .padding(.horizontal, Spacing.space4)  // macOS: 16pt
+            #endif
             .padding(.vertical, Spacing.space2)
+        }
+    }
+
+    @ViewBuilder
+    private func categoryChip(for category: CategoryItem) -> some View {
+        let isSelected = selectedCategory == category.name
+        let action = {
+            withAnimation(.easeInOut(duration: AnimationDuration.fast)) {
+                selectedCategory = category.name
+            }
+        }
+
+        if showIcons, let icon = category.icon {
+            CategoryChipWithIcon(
+                category.name,
+                icon: icon,
+                count: category.count,
+                isSelected: isSelected,
+                action: action
+            )
+        } else {
+            CategoryChip(
+                category.name,
+                count: category.count,
+                isSelected: isSelected,
+                action: action
+            )
         }
     }
 }
@@ -57,46 +82,6 @@ struct CategoryItem: Identifiable, Equatable {
     }
 }
 
-// MARK: - Category Filter Bar with Icons
-
-struct CategoryFilterBarWithIcons: View {
-    let categories: [CategoryItem]
-    @Binding var selectedCategory: String
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Spacing.space2) {
-                ForEach(categories) { category in
-                    if let icon = category.icon {
-                        CategoryChipWithIcon(
-                            category.name,
-                            icon: icon,
-                            count: category.count,
-                            isSelected: selectedCategory == category.name
-                        ) {
-                            withAnimation(.easeInOut(duration: AnimationDuration.fast)) {
-                                selectedCategory = category.name
-                            }
-                        }
-                    } else {
-                        CategoryChip(
-                            category.name,
-                            count: category.count,
-                            isSelected: selectedCategory == category.name
-                        ) {
-                            withAnimation(.easeInOut(duration: AnimationDuration.fast)) {
-                                selectedCategory = category.name
-                            }
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal, Spacing.space4)
-            .padding(.vertical, Spacing.space2)
-        }
-    }
-}
-
 // MARK: - Preview
 
 #Preview("Category Filter Bar") {
@@ -104,9 +89,9 @@ struct CategoryFilterBarWithIcons: View {
         @State private var selected = "All"
 
         let categories = [
-            CategoryItem(name: "All", count: 42),
-            CategoryItem(name: "Unclassified", count: 5),
-            CategoryItem(name: "Nature", count: 15),
+            CategoryItem(name: "All", count: 42, icon: "photo.on.rectangle"),
+            CategoryItem(name: "Unclassified", count: 5, icon: "questionmark.circle"),
+            CategoryItem(name: "Nature", count: 15, icon: "leaf"),
             CategoryItem(name: "Portrait", count: 8),
             CategoryItem(name: "Urban", count: 7),
             CategoryItem(name: "Food", count: 4),
@@ -115,7 +100,13 @@ struct CategoryFilterBarWithIcons: View {
 
         var body: some View {
             VStack(spacing: 24) {
+                Text("Without Icons")
+                    .typography(.caption1)
                 CategoryFilterBar(categories: categories, selectedCategory: $selected)
+
+                Text("With Icons")
+                    .typography(.caption1)
+                CategoryFilterBar(categories: categories, selectedCategory: $selected, showIcons: true)
 
                 Text("Selected: \(selected)")
                     .typography(.body)

@@ -90,6 +90,42 @@ struct DesignColors {
 
     /// For image overlays (gradients)
     let imageOverlay = Color.black.opacity(0.4)
+
+    // MARK: - Liquid Glass (iOS 26 Style)
+
+    /// Glass background with transparency
+    let glassBackground = Color(light: Color.white.opacity(0.7), dark: Color.white.opacity(0.1))
+
+    /// Glass border - subtle white edge
+    let glassBorder = Color(light: Color.white.opacity(0.5), dark: Color.white.opacity(0.2))
+
+    /// Glass highlight for edges
+    let glassHighlight = Color(light: Color.white.opacity(0.8), dark: Color.white.opacity(0.3))
+
+    // MARK: - AI Accent Colors
+
+    /// AI primary purple
+    let aiPrimary = Color(light: Color(hex: "7C3AED"), dark: Color(hex: "A78BFA"))
+
+    /// AI secondary glow
+    let aiGlow = Color(light: Color(hex: "A78BFA"), dark: Color(hex: "C4B5FD"))
+
+    /// AI gradient start
+    let aiGradientStart = Color(hex: "7C3AED")
+
+    /// AI gradient end
+    let aiGradientEnd = Color(hex: "EC4899")
+
+    // MARK: - Confidence Colors
+
+    /// High confidence (>80%)
+    let confidenceHigh = Color(hex: "10B981")
+
+    /// Medium confidence (50-80%)
+    let confidenceMid = Color(hex: "F59E0B")
+
+    /// Low confidence (<50%)
+    let confidenceLow = Color(hex: "EF4444")
 }
 
 // MARK: - Color Extension for Light/Dark Mode
@@ -148,6 +184,8 @@ enum CornerRadius {
     static let large: CGFloat = 14
     /// 20pt - Sheets, panels
     static let xl: CGFloat = 20
+    /// 28pt - Bottom sheets, modals
+    static let xxl: CGFloat = 28
 }
 
 // MARK: - Shadow Tokens
@@ -234,6 +272,16 @@ enum Motion {
     /// Smooth easing for state changes
     static func smooth() -> Animation {
         .easeInOut(duration: normal)
+    }
+
+    /// Sheet snap animation - quick and responsive
+    static func sheetSnap() -> Animation {
+        .spring(response: 0.35, dampingFraction: 0.85)
+    }
+
+    /// Sheet drag animation - follows finger closely
+    static func sheetDrag() -> Animation {
+        .interactiveSpring(response: 0.15, dampingFraction: 0.86)
     }
 }
 

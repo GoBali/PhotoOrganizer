@@ -56,6 +56,18 @@ struct LibraryView: View {
         } message: {
             Text(errorMessage)
         }
+        .confirmationDialog(
+            "Reclassify All Photos?",
+            isPresented: $showReclassifyAllConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Reclassify \(photos.count) photos") {
+                Task { await reclassifyAllPhotos() }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This will re-analyze all \(photos.count) photos using image classification. This may take a while.")
+        }
         .animation(.easeInOut(duration: AnimationDuration.normal), value: library.isImporting)
     }
 
@@ -78,70 +90,32 @@ struct LibraryView: View {
         }
     }
 
-    // MARK: - Grid Control Bar
-
-    private var gridControlBar: some View {
-        HStack(spacing: Spacing.space3) {
-            CompactGridColumnPicker(columns: $library.gridColumns, range: 2...6)
-
-            Spacer()
-
-            // Reclassify All button
-            Button {
-                showReclassifyAllConfirm = true
-            } label: {
-                HStack(spacing: Spacing.space1) {
-                    if isReclassifyingAll {
-                        ProgressView()
-                            .scaleEffect(0.7)
-                            .frame(width: 14, height: 14)
-                    } else {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    Text("Reclassify All")
-                        .font(.system(size: 12, weight: .medium))
-                }
-                .foregroundStyle(isReclassifyingAll ? Color.ds.textTertiary : Color.ds.secondary)
-                .padding(.horizontal, Spacing.space3)
-                .padding(.vertical, Spacing.space2)
-                .background(Color.ds.surfaceSecondary)
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
-            }
-            .buttonStyle(.plain)
-            .disabled(isReclassifyingAll || photos.isEmpty)
-        }
-        .padding(.horizontal, Spacing.space3)
-        .padding(.vertical, Spacing.space2)
-        .background(Color.ds.background)
-        .confirmationDialog(
-            "Reclassify All Photos?",
-            isPresented: $showReclassifyAllConfirm,
-            titleVisibility: .visible
-        ) {
-            Button("Reclassify \(photos.count) photos") {
-                Task {
-                    await reclassifyAllPhotos()
-                }
-            }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("This will re-analyze all \(photos.count) photos using image classification. This may take a while.")
-        }
-    }
-
     // MARK: - Category Filter Bar
 
     private var categoryFilterBar: some View {
-        VStack(spacing: 0) {
-            gridControlBar
-
+        #if os(iOS)
+        CategoryFilterBar(
+            categories: categoryItems,
+            selectedCategory: $library.selectedCategory
+        )
+        .background(Color.ds.background)
+        #else
+        HStack(spacing: 0) {
             CategoryFilterBar(
                 categories: categoryItems,
                 selectedCategory: $library.selectedCategory
             )
+
+            ReclassifyAllButton(
+                isReclassifying: isReclassifyingAll,
+                isDisabled: photos.isEmpty
+            ) {
+                showReclassifyAllConfirm = true
+            }
+            .padding(.trailing, Spacing.space3)
         }
         .background(Color.ds.background)
+        #endif
     }
 
     // MARK: - Content Area
@@ -239,7 +213,17 @@ struct LibraryView: View {
     private var toolbarContent: some ToolbarContent {
         #if os(iOS)
         ToolbarItem(placement: .navigationBarTrailing) {
-            EmptyView()
+            Button {
+                showReclassifyAllConfirm = true
+            } label: {
+                if isReclassifyingAll {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                }
+            }
+            .disabled(isReclassifyingAll || photos.isEmpty)
         }
         #elseif os(macOS)
         ToolbarItemGroup(placement: .automatic) {
@@ -430,34 +414,38 @@ struct AnyShape: Shape {
         path(rect)
     }
 }
+#endif
 
-// MARK: - Legacy Floating Action Button View
+// MARK: - Reclassify All Button (macOS)
 
-struct FloatingActionButtonView: View {
-    let icon: String
-
-    private let size: CGFloat = 56
+#if os(macOS)
+struct ReclassifyAllButton: View {
+    let isReclassifying: Bool
+    let isDisabled: Bool
+    let action: () -> Void
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [Color.ds.secondary, Color.ds.secondaryVariant],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: size, height: size)
-                .shadow(color: Color.ds.secondary.opacity(0.4), radius: 12, x: 0, y: 6)
-                .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-
-            Image(systemName: icon)
-                .font(.system(size: IconSize.large, weight: .semibold))
-                .foregroundStyle(Color.ds.textOnAccent)
+        Button(action: action) {
+            HStack(spacing: Spacing.space1) {
+                if isReclassifying {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                        .frame(width: 14, height: 14)
+                } else {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                Text("Reclassify All")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .foregroundStyle(isReclassifying ? Color.ds.textTertiary : Color.ds.secondary)
+            .padding(.horizontal, Spacing.space3)
+            .padding(.vertical, Spacing.space2)
+            .background(Color.ds.surfaceSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
         }
-        .accessibilityLabel("Add photos")
-        .accessibilityHint("Double tap to import photos")
+        .buttonStyle(.plain)
+        .disabled(isDisabled || isReclassifying)
     }
 }
 #endif

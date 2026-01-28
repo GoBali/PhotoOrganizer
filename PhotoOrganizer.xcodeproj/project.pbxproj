@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		DD0001012C0000010029267F /* PlatformImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0001002C0000010029267F /* PlatformImage.swift */; };
 		CC0001012F2500010029267F /* GridColumnPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0001002F2500010029267F /* GridColumnPicker.swift */; };
 		CC0002012F2500020029267F /* ConfidenceBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0002002F2500020029267F /* ConfidenceBadge.swift */; };
 		CC0003012F2500030029267F /* ClassificationHeroCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0003002F2500030029267F /* ClassificationHeroCard.swift */; };
@@ -67,6 +68,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		DD0001002C0000010029267F /* PlatformImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformImage.swift; sourceTree = "<group>"; };
 		CC0001002F2500010029267F /* GridColumnPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GridColumnPicker.swift; sourceTree = "<group>"; };
 		CC0002002F2500020029267F /* ConfidenceBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfidenceBadge.swift; sourceTree = "<group>"; };
 		CC0003002F2500030029267F /* ClassificationHeroCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassificationHeroCard.swift; sourceTree = "<group>"; };
@@ -163,6 +165,7 @@
 			children = (
 				476E42352BF0941D0029267F /* PhotoOrganizerApp.swift */,
 				476E42372BF0941D0029267F /* Persistence.swift */,
+				DD0001002C0000010029267F /* PlatformImage.swift */,
 				476E423C2BF0941D0029267F /* ContentView.swift */,
 				AA0001002C0000010029267F /* ImagePicker.swift */,
 				BB0005002C0000500029267F /* MyImageClassifier.mlmodel */,
@@ -494,6 +497,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DD0001012C0000010029267F /* PlatformImage.swift in Sources */,
 				CC0001012F2500010029267F /* GridColumnPicker.swift in Sources */,
 				CC0002012F2500020029267F /* ConfidenceBadge.swift in Sources */,
 				CC0003012F2500030029267F /* ClassificationHeroCard.swift in Sources */,
