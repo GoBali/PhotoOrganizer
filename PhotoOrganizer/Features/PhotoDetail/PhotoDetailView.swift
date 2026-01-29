@@ -12,7 +12,7 @@ import SwiftUI
 
 /// Bottom sheet states - available on all platforms
 enum BottomSheetState: CaseIterable {
-    case collapsed  // 최소 상태 - 핵심 정보만
+    case collapsed  // 최소 상태 - 핸들 정보만
     case half       // 중간 상태 - 주요 정보
     case expanded   // 확장 상태 - 모든 정보
 
@@ -23,6 +23,16 @@ enum BottomSheetState: CaseIterable {
         case .expanded: return 0.85
         }
     }
+}
+
+// MARK: - Action Feedback State
+
+/// 버튼 작업 완료 피드백 상태
+enum ActionFeedbackState: Equatable {
+    case idle           // 기본 상태
+    case processing     // 처리 중
+    case success(changed: Bool)  // 성공 (변경 여부)
+    case failed         // 실패
 }
 
 // MARK: - Photo Detail View
@@ -40,7 +50,9 @@ struct PhotoDetailView: View {
     @State private var image: Image?
     @State private var platformImage: PlatformImage?
     @State private var showFullScreenImage = false
-    @State private var isAddingTag = false
+    @State private var isTagInputFocused = false
+    @State private var filteredTags: [String] = []
+    @State private var showAutoComplete = false
 
     // Bottom Sheet State
     @State private var sheetState: BottomSheetState = .half
@@ -51,6 +63,10 @@ struct PhotoDetailView: View {
     // Swipe Navigation State
     @State private var swipeOffset: CGFloat = 0
     @State private var isDraggingImage = false
+
+    // Action Feedback State
+    @State private var reclassifyFeedback: ActionFeedbackState = .idle
+    @State private var locationFeedback: ActionFeedbackState = .idle
 
     // MARK: - Computed Properties
 
@@ -182,11 +198,6 @@ struct PhotoDetailView: View {
                     }
             }
 
-            // Expand button
-            if image != nil {
-                expandButton
-                    .padding(Spacing.space4)
-            }
         }
         #if os(iOS)
         .fullScreenCover(isPresented: $showFullScreenImage) {
@@ -198,29 +209,6 @@ struct PhotoDetailView: View {
                 .frame(minWidth: 600, minHeight: 500)
         }
         #endif
-    }
-
-    // MARK: - Expand Button
-
-    private var expandButton: some View {
-        Button {
-            #if os(iOS)
-            HapticStyle.light.trigger()
-            #endif
-            showFullScreenImage = true
-        } label: {
-            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white)
-                .padding(Spacing.space3)
-                .background(.ultraThinMaterial)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Swipe Gesture
@@ -303,12 +291,10 @@ struct PhotoDetailView: View {
                 status: photo.classificationStateValue,
                 isPredictedLocation: !photo.hasGPSData && photo.predictedLocation != nil,
                 predictedLocation: photo.predictedLocation,
-                locationConfidence: photo.predictedLocationConfidence
+                locationConfidence: photo.predictedLocationConfidence,
+                feedbackState: reclassifyFeedback
             ) {
-                #if os(iOS)
-                HapticStyle.medium.trigger()
-                #endif
-                Task { await library.reclassify(photo) }
+                Task { await performReclassify() }
             }
 
             // Location Section (중간 + 확장 상태)
@@ -324,11 +310,6 @@ struct PhotoDetailView: View {
             // Notes Section (확장 상태만)
             if state == .expanded {
                 notesSection
-            }
-
-            // File Info Section (확장 상태만)
-            if state == .expanded {
-                fileInfoSection
             }
         }
         .animation(Motion.smooth(), value: state)
@@ -357,22 +338,22 @@ struct PhotoDetailView: View {
                             Text(country)
                                 .typography(.subheadline, color: .ds.textSecondary)
                         }
+
+                        // 피드백 캡션
+                        if case .success(let changed) = locationFeedback {
+                            Text(changed ? "Updated" : "No changes")
+                                .typography(.caption2, color: changed ? .ds.success : .ds.textTertiary)
+                                .transition(.opacity.combined(with: .scale))
+                        }
                     }
 
                     Spacer()
 
-                    // Refresh button
-                    Button {
-                        #if os(iOS)
-                        HapticStyle.light.trigger()
-                        #endif
-                        Task { await library.refreshLocation(photo) }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color.ds.textSecondary)
-                    }
-                    .buttonStyle(.plain)
+                    // Refresh button with feedback
+                    LocationRefreshButton(
+                        feedbackState: locationFeedback,
+                        action: { Task { await performLocationRefresh() } }
+                    )
                 }
             }
         }
@@ -383,6 +364,7 @@ struct PhotoDetailView: View {
     private var tagsSection: some View {
         glassCard {
             VStack(alignment: .leading, spacing: Spacing.space3) {
+                // Header
                 HStack {
                     Image(systemName: "tag.fill")
                         .font(.system(size: 14, weight: .medium))
@@ -390,53 +372,9 @@ struct PhotoDetailView: View {
                     Text("Tags")
                         .typography(.subheadline, color: .ds.textSecondary)
                     Spacer()
-
-                    // Add tag button
-                    Button {
-                        #if os(iOS)
-                        HapticStyle.soft.trigger()
-                        #endif
-                        isAddingTag.toggle()
-                    } label: {
-                        Image(systemName: isAddingTag ? "xmark" : "plus")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Color.ds.secondary)
-                            .frame(width: 24, height: 24)
-                            .background(Color.ds.secondary.opacity(0.1))
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
                 }
 
-                // Tag input field
-                if isAddingTag {
-                    HStack(spacing: Spacing.space2) {
-                        TextField("Add tag...", text: $newTag)
-                            .textFieldStyle(.plain)
-                            .padding(.horizontal, Spacing.space3)
-                            .padding(.vertical, Spacing.space2)
-                            .background(Color.ds.surfaceSecondary)
-                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-                            .onSubmit {
-                                addTag()
-                            }
-
-                        Button {
-                            addTag()
-                        } label: {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .frame(width: 32, height: 32)
-                                .background(Color.ds.secondary)
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(newTag.trimmingCharacters(in: .whitespaces).isEmpty)
-                    }
-                }
-
-                // Tags list
+                // 현재 태그 목록
                 if !photo.tagsArray.isEmpty {
                     FlowLayout(spacing: Spacing.space2) {
                         ForEach(photo.tagsArray, id: \.self) { tag in
@@ -448,12 +386,118 @@ struct PhotoDetailView: View {
                             }
                         }
                     }
-                } else if !isAddingTag {
-                    Text("No tags yet")
-                        .typography(.caption1, color: .ds.textTertiary)
+                }
+
+                // 인라인 태그 입력 필드 (항상 표시)
+                VStack(alignment: .leading, spacing: Spacing.space2) {
+                    HStack(spacing: Spacing.space2) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color.ds.textTertiary)
+
+                        TextField("Add tag...", text: $newTag)
+                            .textFieldStyle(.plain)
+                            .typography(.subheadline, color: .ds.textPrimary)
+                            .onSubmit {
+                                addTag()
+                            }
+                            .onChange(of: newTag) { _, newValue in
+                                updateAutoComplete(query: newValue)
+                            }
+
+                        if !newTag.isEmpty {
+                            Button {
+                                addTag()
+                            } label: {
+                                Image(systemName: "return")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(Color.ds.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, Spacing.space3)
+                    .padding(.vertical, Spacing.space2)
+                    .background(Color.ds.surfaceSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+
+                    // 자동완성 드롭다운
+                    if showAutoComplete && !filteredTags.isEmpty {
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(filteredTags, id: \.self) { suggestion in
+                                Button {
+                                    selectAutoCompleteSuggestion(suggestion)
+                                } label: {
+                                    HStack {
+                                        Text(suggestion)
+                                            .typography(.subheadline, color: .ds.textPrimary)
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, Spacing.space3)
+                                    .padding(.vertical, Spacing.space2)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+
+                                if suggestion != filteredTags.last {
+                                    Divider()
+                                        .background(Color.ds.border)
+                                }
+                            }
+                        }
+                        .background(Color.ds.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: CornerRadius.small)
+                                .stroke(Color.ds.border, lineWidth: 0.5)
+                        )
+                    }
+                }
+
+                // 추천 태그 (기존에 사용된 태그)
+                let suggestions = library.suggestedTags(for: photo, limit: 6)
+                if !suggestions.isEmpty {
+                    VStack(alignment: .leading, spacing: Spacing.space2) {
+                        Text("Suggestions")
+                            .typography(.caption2, color: .ds.textTertiary)
+
+                        FlowLayout(spacing: Spacing.space2) {
+                            ForEach(suggestions, id: \.self) { suggestion in
+                                SuggestionChipView(tag: suggestion) {
+                                    #if os(iOS)
+                                    HapticStyle.soft.trigger()
+                                    #endif
+                                    library.addTag(suggestion, to: photo)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+
+    // MARK: - Tag AutoComplete
+
+    private func updateAutoComplete(query: String) {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty {
+            filteredTags = []
+            showAutoComplete = false
+        } else {
+            filteredTags = library.filterTags(matching: trimmed, excluding: photo)
+            showAutoComplete = !filteredTags.isEmpty
+        }
+    }
+
+    private func selectAutoCompleteSuggestion(_ suggestion: String) {
+        #if os(iOS)
+        HapticStyle.soft.trigger()
+        #endif
+        library.addTag(suggestion, to: photo)
+        newTag = ""
+        showAutoComplete = false
+        filteredTags = []
     }
 
     // MARK: - Notes Section
@@ -505,52 +549,6 @@ struct PhotoDetailView: View {
         }
     }
 
-    // MARK: - File Info Section
-
-    private var fileInfoSection: some View {
-        glassCard {
-            VStack(alignment: .leading, spacing: Spacing.space3) {
-                HStack {
-                    Image(systemName: "doc.text")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.ds.textSecondary)
-                    Text("File Info")
-                        .typography(.subheadline, color: .ds.textSecondary)
-                }
-
-                VStack(spacing: Spacing.space2) {
-                    if let originalName = photo.originalFilename {
-                        infoRow(label: "Original Name", value: originalName)
-                    }
-
-                    if let createdAt = photo.createdAt {
-                        infoRow(label: "Added", value: createdAt.formatted(date: .abbreviated, time: .shortened))
-                    }
-
-                    if photo.hasValidGPS, let coords = photo.coordinatesString {
-                        infoRow(label: "Coordinates", value: coords)
-                    }
-
-                    if photo.classificationStateValue == .failed,
-                       let errorMessage = photo.classificationError {
-                        infoRow(label: "Error", value: errorMessage, isError: true)
-                    }
-                }
-            }
-        }
-    }
-
-    private func infoRow(label: String, value: String, isError: Bool = false) -> some View {
-        HStack {
-            Text(label)
-                .typography(.caption1, color: .ds.textSecondary)
-            Spacer()
-            Text(value)
-                .typography(.caption1, color: isError ? .ds.error : .ds.textPrimary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-        }
-    }
 
     // MARK: - Glass Card Helper
 
@@ -580,33 +578,12 @@ struct PhotoDetailView: View {
     // MARK: - Toolbar Content
 
     private var toolbarContent: some View {
-        HStack(spacing: Spacing.space2) {
-            if photo.hasValidGPS {
-                Button {
-                    Task { await library.refreshLocation(photo) }
-                } label: {
-                    Image(systemName: "location.circle")
-                        .font(.body)
-                }
-            }
-
-            if !photo.hasGPSData {
-                Button {
-                    Task { await library.repredictLocation(photo) }
-                } label: {
-                    Image(systemName: "sparkles")
-                        .font(.body)
-                        .foregroundStyle(Color.ds.aiPrimary)
-                }
-            }
-
-            Button {
-                showDeleteConfirm = true
-            } label: {
-                Image(systemName: "trash")
-                    .font(.body)
-                    .foregroundStyle(Color.ds.error)
-            }
+        Button {
+            showDeleteConfirm = true
+        } label: {
+            Image(systemName: "trash")
+                .font(.body)
+                .foregroundStyle(Color.ds.error)
         }
     }
 
@@ -622,15 +599,15 @@ struct PhotoDetailView: View {
                     status: photo.classificationStateValue,
                     isPredictedLocation: !photo.hasGPSData && photo.predictedLocation != nil,
                     predictedLocation: photo.predictedLocation,
-                    locationConfidence: photo.predictedLocationConfidence
+                    locationConfidence: photo.predictedLocationConfidence,
+                    feedbackState: reclassifyFeedback
                 ) {
-                    Task { await library.reclassify(photo) }
+                    Task { await performReclassify() }
                 }
 
                 locationSection
                 tagsSection
                 notesSection
-                fileInfoSection
             }
             .padding(Spacing.space4)
         }
@@ -649,7 +626,72 @@ struct PhotoDetailView: View {
         #endif
         library.addTag(trimmed, to: photo)
         newTag = ""
-        isAddingTag = false
+        showAutoComplete = false
+        filteredTags = []
+    }
+
+    // MARK: - Reclassify Action
+
+    private func performReclassify() async {
+        withAnimation(Motion.smooth()) {
+            reclassifyFeedback = .processing
+        }
+
+        let result = await library.reclassify(photo)
+
+        withAnimation(Motion.smooth()) {
+            if result.success {
+                reclassifyFeedback = .success(changed: result.changed)
+                #if os(iOS)
+                HapticStyle.success.trigger()
+                #endif
+            } else {
+                reclassifyFeedback = .failed
+                #if os(iOS)
+                HapticStyle.error.trigger()
+                #endif
+            }
+        }
+
+        // 2초 후 자동 리셋
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        withAnimation(Motion.smooth()) {
+            reclassifyFeedback = .idle
+        }
+    }
+
+    // MARK: - Location Refresh Action
+
+    private func performLocationRefresh() async {
+        withAnimation(Motion.smooth()) {
+            locationFeedback = .processing
+        }
+
+        let result = await library.refreshLocation(photo)
+
+        withAnimation(Motion.smooth()) {
+            if result.success {
+                locationFeedback = .success(changed: result.changed)
+                #if os(iOS)
+                if result.changed {
+                    HapticStyle.success.trigger()
+                } else {
+                    HapticStyle.soft.trigger()
+                }
+                #endif
+            } else {
+                locationFeedback = .failed
+                #if os(iOS)
+                HapticStyle.error.trigger()
+                #endif
+            }
+        }
+
+        // 2초 후 자동 리셋
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        withAnimation(Motion.smooth()) {
+            locationFeedback = .idle
+        }
     }
 }
 
@@ -675,6 +717,35 @@ private struct TagChipView: View {
         .padding(.vertical, Spacing.space1)
         .background(Color.ds.surfaceSecondary)
         .clipShape(Capsule())
+    }
+}
+
+// MARK: - Suggestion Chip View (추천 태그용)
+
+private struct SuggestionChipView: View {
+    let tag: String
+    let onAdd: () -> Void
+
+    var body: some View {
+        Button(action: onAdd) {
+            HStack(spacing: Spacing.space1) {
+                Image(systemName: "plus")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(Color.ds.secondary)
+
+                Text(tag)
+                    .typography(.caption1, color: .ds.textSecondary)
+            }
+            .padding(.horizontal, Spacing.space2)
+            .padding(.vertical, Spacing.space1)
+            .background(Color.ds.secondary.opacity(0.1))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .strokeBorder(Color.ds.secondary.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -820,9 +891,11 @@ struct AIClassificationCard: View {
     let isPredictedLocation: Bool
     let predictedLocation: String?
     let locationConfidence: Double
+    let feedbackState: ActionFeedbackState
     var onReclassify: (() -> Void)?
 
-    @State private var animatedConfidence: Double = 0
+    @State private var animatedConfidence: Double
+    @State private var rotationAngle: Double = 0
 
     init(
         label: String,
@@ -831,6 +904,7 @@ struct AIClassificationCard: View {
         isPredictedLocation: Bool = false,
         predictedLocation: String? = nil,
         locationConfidence: Double = 0,
+        feedbackState: ActionFeedbackState = .idle,
         onReclassify: (() -> Void)? = nil
     ) {
         self.label = label
@@ -839,7 +913,9 @@ struct AIClassificationCard: View {
         self.isPredictedLocation = isPredictedLocation
         self.predictedLocation = predictedLocation
         self.locationConfidence = locationConfidence
+        self.feedbackState = feedbackState
         self.onReclassify = onReclassify
+        self._animatedConfidence = State(initialValue: confidence)
     }
 
     private var confidenceColor: Color {
@@ -855,16 +931,45 @@ struct AIClassificationCard: View {
     }
 
     private var categoryIcon: String {
-        let lowercased = label.lowercased()
-        if lowercased.contains("beach") || lowercased.contains("ocean") { return "beach.umbrella.fill" }
-        else if lowercased.contains("mountain") { return "mountain.2.fill" }
-        else if lowercased.contains("city") || lowercased.contains("building") { return "building.2.fill" }
-        else if lowercased.contains("forest") || lowercased.contains("nature") { return "leaf.fill" }
-        else if lowercased.contains("food") { return "fork.knife" }
-        else if lowercased.contains("animal") || lowercased.contains("pet") { return "pawprint.fill" }
-        else if lowercased.contains("people") || lowercased.contains("person") { return "person.fill" }
-        else if lowercased.contains("sunset") || lowercased.contains("sky") { return "sun.horizon.fill" }
-        else { return "photo.fill" }
+        // AI를 나타내는 통일된 아이콘 사용
+        return "sparkles"
+    }
+
+    // 피드백 상태 헬퍼
+    private var isSuccessState: Bool {
+        if case .success = feedbackState { return true }
+        return false
+    }
+
+    private var successIconColor: Color {
+        if case .success(let changed) = feedbackState {
+            return changed ? Color.ds.success : Color.ds.textTertiary
+        }
+        return Color.ds.success
+    }
+
+    private var buttonBackgroundColor: Color {
+        switch feedbackState {
+        case .idle, .processing:
+            return Color.ds.secondary.opacity(0.1)
+        case .success(let changed):
+            return changed ? Color.ds.success.opacity(0.15) : Color.ds.textTertiary.opacity(0.1)
+        case .failed:
+            return Color.ds.error.opacity(0.15)
+        }
+    }
+
+    // 회전 애니메이션
+    private func startRotationAnimation() {
+        withAnimation(.linear(duration: 1).repeatForever(autoreverses: false)) {
+            rotationAngle = 360
+        }
+    }
+
+    private func stopRotationAnimation() {
+        withAnimation(.easeOut(duration: 0.3)) {
+            rotationAngle = 0
+        }
     }
 
     var body: some View {
@@ -903,16 +1008,55 @@ struct AIClassificationCard: View {
 
                 Spacer()
 
-                if let onReclassify, status != .processing {
-                    Button(action: onReclassify) {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Color.ds.secondary)
+                if let onReclassify {
+                    // Reclassify 버튼 with feedback
+                    VStack(spacing: 4) {
+                        Button(action: onReclassify) {
+                            ZStack {
+                                // Idle/Processing 아이콘
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundStyle(Color.ds.secondary)
+                                    .rotationEffect(.degrees(rotationAngle))
+                                    .opacity(feedbackState == .idle || feedbackState == .processing ? 1 : 0)
+                                    .scaleEffect(feedbackState == .idle || feedbackState == .processing ? 1 : 0.5)
+
+                                // Success 아이콘
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(successIconColor)
+                                    .opacity(isSuccessState ? 1 : 0)
+                                    .scaleEffect(isSuccessState ? 1 : 0.5)
+
+                                // Failed 아이콘
+                                Image(systemName: "exclamationmark")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(Color.ds.error)
+                                    .opacity(feedbackState == .failed ? 1 : 0)
+                                    .scaleEffect(feedbackState == .failed ? 1 : 0.5)
+                            }
                             .frame(width: 36, height: 36)
-                            .background(Color.ds.secondary.opacity(0.1))
+                            .background(buttonBackgroundColor)
                             .clipShape(Circle())
+                            .animation(Motion.smooth(), value: feedbackState)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(feedbackState == .processing || status == .processing)
+
+                        // 피드백 캡션
+                        if case .success(let changed) = feedbackState {
+                            Text(changed ? "Updated" : "No changes")
+                                .typography(.caption2, color: changed ? .ds.success : .ds.textTertiary)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
                     }
-                    .buttonStyle(.plain)
+                    .onChange(of: feedbackState) { _, newValue in
+                        if newValue == .processing {
+                            startRotationAnimation()
+                        } else {
+                            stopRotationAnimation()
+                        }
+                    }
                 }
             }
 
@@ -976,6 +1120,83 @@ struct AIClassificationCard: View {
             #endif
             RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous).fill(Color.ds.glassBackground.opacity(0.5))
             RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous).stroke(Color.ds.glassBorder, lineWidth: 1)
+        }
+    }
+}
+
+// MARK: - Location Refresh Button
+
+private struct LocationRefreshButton: View {
+    let feedbackState: ActionFeedbackState
+    let action: () -> Void
+
+    @State private var rotationAngle: Double = 0
+
+    private var isSuccessState: Bool {
+        if case .success = feedbackState { return true }
+        return false
+    }
+
+    private var successIconColor: Color {
+        if case .success(let changed) = feedbackState {
+            return changed ? Color.ds.success : Color.ds.textTertiary
+        }
+        return Color.ds.success
+    }
+
+    private var buttonBackgroundColor: Color {
+        switch feedbackState {
+        case .idle, .processing:
+            return Color.clear
+        case .success(let changed):
+            return changed ? Color.ds.success.opacity(0.1) : Color.clear
+        case .failed:
+            return Color.ds.error.opacity(0.1)
+        }
+    }
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                // Idle/Processing 아이콘
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.ds.textSecondary)
+                    .rotationEffect(.degrees(rotationAngle))
+                    .opacity(feedbackState == .idle || feedbackState == .processing ? 1 : 0)
+                    .scaleEffect(feedbackState == .idle || feedbackState == .processing ? 1 : 0.5)
+
+                // Success 아이콘
+                Image(systemName: "checkmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(successIconColor)
+                    .opacity(isSuccessState ? 1 : 0)
+                    .scaleEffect(isSuccessState ? 1 : 0.5)
+
+                // Failed 아이콘
+                Image(systemName: "exclamationmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.ds.error)
+                    .opacity(feedbackState == .failed ? 1 : 0)
+                    .scaleEffect(feedbackState == .failed ? 1 : 0.5)
+            }
+            .frame(width: 28, height: 28)
+            .background(buttonBackgroundColor)
+            .clipShape(Circle())
+            .animation(Motion.smooth(), value: feedbackState)
+        }
+        .buttonStyle(.plain)
+        .disabled(feedbackState == .processing)
+        .onChange(of: feedbackState) { _, newValue in
+            if newValue == .processing {
+                withAnimation(.linear(duration: 1).repeatForever(autoreverses: false)) {
+                    rotationAngle = 360
+                }
+            } else {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    rotationAngle = 0
+                }
+            }
         }
     }
 }

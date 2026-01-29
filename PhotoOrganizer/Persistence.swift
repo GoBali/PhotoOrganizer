@@ -390,6 +390,20 @@ enum ImportProgress: Equatable {
     }
 }
 
+// MARK: - Action Results
+
+/// Reclassify 작업 결과
+struct ReclassifyResult {
+    let success: Bool
+    let changed: Bool
+}
+
+/// 위치 갱신 작업 결과
+struct LocationRefreshResult {
+    let success: Bool
+    let changed: Bool
+}
+
 extension PhotoAsset {
     var tagsArray: [Tag] {
         let set = tags as? Set<Tag> ?? []
@@ -684,13 +698,24 @@ final class PhotoLibraryStore: ObservableObject {
         }
     }
 
-    func reclassify(_ photo: PhotoAsset) async {
+    func reclassify(_ photo: PhotoAsset) async -> ReclassifyResult {
         guard let image = await image(for: photo) else {
             lastError = "Photo file is missing."
-            return
+            return ReclassifyResult(success: false, changed: false)
         }
 
+        // 이전 값 저장
+        let previousLabel = photo.classificationLabel
+        let previousConfidence = photo.classificationConfidence
+
         await classify(photo: photo, image: image)
+
+        // 결과 비교
+        let changed = photo.classificationLabel != previousLabel ||
+                      abs(photo.classificationConfidence - previousConfidence) > 0.01
+        let success = photo.classificationStateValue == .completed
+
+        return ReclassifyResult(success: success, changed: changed)
     }
 
     func delete(_ photo: PhotoAsset) {
@@ -739,6 +764,42 @@ final class PhotoLibraryStore: ObservableObject {
         cleanupOrphanedTags()
     }
 
+    /// 모든 태그 이름 목록 (사용 빈도순 정렬)
+    func allTagNames() -> [String] {
+        let request = Tag.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+
+        guard let tags = try? context.fetch(request) else { return [] }
+
+        // 사용 빈도순으로 정렬 (많이 사용된 태그 먼저)
+        let sorted = tags.sorted { ($0.photos?.count ?? 0) > ($1.photos?.count ?? 0) }
+        return sorted.compactMap { $0.name }
+    }
+
+    /// 현재 사진에 없는 추천 태그 (최대 개수 제한)
+    func suggestedTags(for photo: PhotoAsset, limit: Int = 8) -> [String] {
+        let existingNames = Set(photo.tagsArray.compactMap { $0.name?.lowercased() })
+        return allTagNames()
+            .filter { !existingNames.contains($0.lowercased()) }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    /// 검색어로 태그 필터링 (자동완성용)
+    func filterTags(matching query: String, excluding photo: PhotoAsset) -> [String] {
+        guard !query.isEmpty else { return [] }
+        let lowercasedQuery = query.lowercased()
+        let existingNames = Set(photo.tagsArray.compactMap { $0.name?.lowercased() })
+
+        return allTagNames()
+            .filter { name in
+                let lowercased = name.lowercased()
+                return lowercased.contains(lowercasedQuery) && !existingNames.contains(lowercased)
+            }
+            .prefix(5)
+            .map { $0 }
+    }
+
     func updateNote(_ note: String, for photo: PhotoAsset) {
         let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
         photo.note = trimmed.isEmpty ? nil : trimmed
@@ -771,12 +832,26 @@ final class PhotoLibraryStore: ObservableObject {
         }
     }
 
-    func refreshLocation(_ photo: PhotoAsset) async {
+    func refreshLocation(_ photo: PhotoAsset) async -> LocationRefreshResult {
         guard photo.hasValidGPS else {
             lastError = "No GPS data available."
-            return
+            return LocationRefreshResult(success: false, changed: false)
         }
+
+        // 이전 값 저장
+        let previousCity = photo.city
+        let previousCountry = photo.country
+        let previousLocationName = photo.locationName
+
         await reverseGeocode(photo: photo)
+
+        // 결과 비교
+        let changed = photo.city != previousCity ||
+                      photo.country != previousCountry ||
+                      photo.locationName != previousLocationName
+        let success = photo.geocodingStateValue == .completed
+
+        return LocationRefreshResult(success: success, changed: changed)
     }
 
     /// GPS 없는 사진의 위치 재예측
@@ -979,6 +1054,7 @@ private final class SafeContinuation<T>: @unchecked Sendable {
 
 final class VisionImageClassifier: @unchecked Sendable {
     private static let logger = Logger(subsystem: "PhotoOrganizer", category: "VisionImageClassifier")
+    private static let classificationQueue = DispatchQueue(label: "com.photoorganizer.classification", qos: .userInitiated)
 
     func classify(image: PlatformImage) async throws -> ClassificationResult {
         guard let cgImage = image.cgImageRepresentation else {
@@ -988,33 +1064,35 @@ final class VisionImageClassifier: @unchecked Sendable {
         return try await withCheckedThrowingContinuation { continuation in
             let safeContinuation = SafeContinuation(continuation)
 
-            let request = VNClassifyImageRequest { request, error in
-                if let error = error {
-                    Self.logger.error("VNClassifyImageRequest failed: \(error.localizedDescription)")
+            // 전용 큐에서 실행하여 handler/request가 완료될 때까지 유지
+            Self.classificationQueue.async {
+                let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+                let request = VNClassifyImageRequest()
+
+                // Simulator/macOS에서는 Neural Engine이 없으므로 CPU만 사용
+                #if targetEnvironment(simulator) || os(macOS)
+                request.usesCPUOnly = true
+                #endif
+
+                do {
+                    try handler.perform([request])
+
+                    // perform이 동기적으로 완료된 후 결과 처리
+                    guard let results = request.results,
+                          let topResult = results.first else {
+                        safeContinuation.resume(throwing: VisionClassifierError.noResults)
+                        return
+                    }
+
+                    Self.logger.info("Classification: \(topResult.identifier) (\(topResult.confidence))")
+                    safeContinuation.resume(returning: ClassificationResult(
+                        label: topResult.identifier,
+                        confidence: Double(topResult.confidence)
+                    ))
+                } catch {
+                    Self.logger.error("VNImageRequestHandler failed: \(error.localizedDescription)")
                     safeContinuation.resume(throwing: error)
-                    return
                 }
-
-                guard let results = request.results as? [VNClassificationObservation],
-                      let topResult = results.first else {
-                    safeContinuation.resume(throwing: VisionClassifierError.noResults)
-                    return
-                }
-
-                // Return top classification result (already sorted by confidence)
-                Self.logger.info("Classification: \(topResult.identifier) (\(topResult.confidence))")
-                safeContinuation.resume(returning: ClassificationResult(
-                    label: topResult.identifier,
-                    confidence: Double(topResult.confidence)
-                ))
-            }
-
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-            do {
-                try handler.perform([request])
-            } catch {
-                Self.logger.error("VNImageRequestHandler failed: \(error.localizedDescription)")
-                safeContinuation.resume(throwing: error)
             }
         }
     }
@@ -1085,6 +1163,11 @@ final class VisionLocationClassifier: @unchecked Sendable {
                     ))
                 }
             }
+
+            // Simulator/macOS에서는 Neural Engine이 없으므로 CPU만 사용
+            #if targetEnvironment(simulator) || os(macOS)
+            request.usesCPUOnly = true
+            #endif
 
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             do {

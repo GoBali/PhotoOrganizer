@@ -247,6 +247,21 @@ struct PhotoGridView: View {
             }
         }
         .background(Color.ds.background)
+        // 더블탭으로 열 수 순환 (1 → 2 → 3 → 4 → 1)
+        // 시뮬레이터에서 핀치 제스처 대신 사용 가능
+        .onTapGesture(count: 2) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                #if os(iOS)
+                library.gridColumns = (library.gridColumns % 4) + 1
+                #else
+                // macOS: 2~6열 범위
+                library.gridColumns = library.gridColumns >= 6 ? 2 : library.gridColumns + 1
+                #endif
+            }
+            #if os(iOS)
+            HapticStyle.light.trigger()
+            #endif
+        }
         #if os(iOS) && targetEnvironment(simulator)
         // iOS Simulator: SwiftUI MagnificationGesture (UIKit 핀치가 불안정/미동작하는 케이스 대비)
         .simultaneousGesture(simulatorPinchGesture)

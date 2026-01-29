@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 1. 빌드 검증
 코드 수정 후 빌드가 성공하는지 확인:
 ```bash
-xcodebuild -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination 'platform=iOS Simulator,name=iPhone 17' build 2>&1 | tail -30
+xcodebuild -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build 2>&1 | tail -30
 ```
 
 ### 2. 테스트 실행
@@ -20,7 +20,7 @@ xcodebuild -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination
 
 **iOS Simulator (권장):**
 ```bash
-xcodebuild -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination 'platform=iOS Simulator,name=iPhone 17' test 2>&1 | tail -50
+xcodebuild -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test 2>&1 | tail -50
 ```
 
 **macOS (My Mac):**
@@ -88,7 +88,7 @@ private var screenHeight: CGFloat {
 코드 수정 후 **양쪽 플랫폼 모두 빌드 확인**:
 ```bash
 # iOS 빌드
-xcodebuild -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination 'platform=iOS Simulator,name=iPhone 17' build 2>&1 | grep -E "(error:|BUILD)" | tail -5
+xcodebuild -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build 2>&1 | grep -E "(error:|BUILD)" | tail -5
 
 # macOS 빌드
 xcodebuild -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination 'platform=macOS' build 2>&1 | grep -E "(error:|BUILD)" | tail -5
@@ -101,12 +101,12 @@ PhotoOrganizer is a SwiftUI-based iOS/macOS photo organization app that uses Cor
 
 ### Build
 ```bash
-xcodebuild -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination 'platform=iOS Simulator,name=iPhone 17' build
+xcodebuild -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
 ```
 
 ### Run Tests
 ```bash
-xcodebuild -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination 'platform=iOS Simulator,name=iPhone 17' test
+xcodebuild -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test
 ```
 
 ### Open in Xcode
@@ -122,19 +122,19 @@ open PhotoOrganizer.xcodeproj
 **수동 실행:**
 ```bash
 # 1. 시뮬레이터 부팅
-xcrun simctl boot "iPhone 17" 2>/dev/null || true
+xcrun simctl boot "iPhone 17 Pro" 2>/dev/null || true
 
 # 2. 빌드
 xcodebuild -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer \
-  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   -derivedDataPath /tmp/PhotoOrganizerBuild build
 
 # 3. 앱 설치 및 실행
-xcrun simctl install "iPhone 17" /tmp/PhotoOrganizerBuild/Build/Products/Debug-iphonesimulator/PhotoOrganizer.app
-xcrun simctl launch "iPhone 17" GoBali.PhotoOrganizer
+xcrun simctl install "iPhone 17 Pro" /tmp/PhotoOrganizerBuild/Build/Products/Debug-iphonesimulator/PhotoOrganizer.app
+xcrun simctl launch "iPhone 17 Pro" GoBali.PhotoOrganizer
 
 # 4. 스크린샷 캡처 (3초 대기)
-sleep 3 && xcrun simctl io "iPhone 17" screenshot /tmp/photoorganizer_screenshot.png
+sleep 3 && xcrun simctl io "iPhone 17 Pro" screenshot /tmp/photoorganizer_screenshot.png
 ```
 
 **스크린샷 확인:**
@@ -257,12 +257,12 @@ CornerRadius.large       // 14pt
 ### Running Single Tests
 To run a specific test class:
 ```bash
-xcodebuild test -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:PhotoOrganizerTests/PhotoOrganizerTests
+xcodebuild test -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:PhotoOrganizerTests/PhotoOrganizerTests
 ```
 
 To run a specific test method:
 ```bash
-xcodebuild test -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:PhotoOrganizerTests/PhotoOrganizerTests/testExample
+xcodebuild test -project PhotoOrganizer.xcodeproj -scheme PhotoOrganizer -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:PhotoOrganizerTests/PhotoOrganizerTests/testExample
 ```
 
 ### Core Data Schema Migrations

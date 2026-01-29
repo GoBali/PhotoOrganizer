@@ -178,14 +178,15 @@ struct ZoomableImageViewiOS: UIViewRepresentable {
             let newWidth = imageSize.width * scale
             let newHeight = imageSize.height * scale
 
+            // imageView를 (0,0)에서 시작 - contentInset으로 중앙 정렬
             imageView.frame = CGRect(
-                x: (scrollViewSize.width - newWidth) / 2,
-                y: (scrollViewSize.height - newHeight) / 2,
+                x: 0,
+                y: 0,
                 width: newWidth,
                 height: newHeight
             )
 
-            scrollView.contentSize = imageView.frame.size
+            scrollView.contentSize = CGSize(width: newWidth, height: newHeight)
             centerImageView()
         }
 
