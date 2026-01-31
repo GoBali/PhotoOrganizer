@@ -359,13 +359,13 @@ struct PhotoImportButton: View {
 struct DynamicFAB: View {
     let isExpanded: Bool
 
-    private let collapsedSize: CGFloat = 56
-    private let expandedHeight: CGFloat = 48
+    private let collapsedSize: CGFloat = 48
+    private let expandedHeight: CGFloat = 40
 
     var body: some View {
         HStack(spacing: Spacing.space2) {
             Image(systemName: "plus")
-                .font(.system(size: IconSize.large, weight: .semibold))
+                .font(.system(size: IconSize.medium, weight: .semibold))
                 .foregroundStyle(Color.ds.textOnAccent)
 
             if isExpanded {
