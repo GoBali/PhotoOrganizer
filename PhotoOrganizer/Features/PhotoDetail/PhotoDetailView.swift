@@ -931,8 +931,46 @@ struct AIClassificationCard: View {
     }
 
     private var categoryIcon: String {
-        // AI를 나타내는 통일된 아이콘 사용
-        return "sparkles"
+        let lowercased = label.lowercased()
+
+        // Beach
+        if ["beach", "shore", "coast", "seashore", "ocean", "sea"].contains(where: { lowercased.contains($0) }) {
+            return "sun.horizon.fill"
+        }
+        // Mountain
+        if ["mountain", "hill", "canyon", "cliff", "valley", "alp", "volcano"].contains(where: { lowercased.contains($0) }) {
+            return "mountain.2.fill"
+        }
+        // Forest
+        if ["forest", "jungle", "woodland", "tree", "rainforest", "park", "garden"].contains(where: { lowercased.contains($0) }) {
+            return "leaf.fill"
+        }
+        // City
+        if ["city", "street", "building", "urban", "downtown", "skyscraper", "bridge"].contains(where: { lowercased.contains($0) }) {
+            return "building.2.fill"
+        }
+        // Lake/Water
+        if ["lake", "river", "waterfall", "pond", "stream", "reservoir", "water"].contains(where: { lowercased.contains($0) }) {
+            return "drop.fill"
+        }
+        // Indoor
+        if ["restaurant", "cafe", "museum", "hotel", "room", "indoor", "interior"].contains(where: { lowercased.contains($0) }) {
+            return "house.fill"
+        }
+        // Animal
+        if ["dog", "cat", "bird", "animal", "pet", "wildlife"].contains(where: { lowercased.contains($0) }) {
+            return "pawprint.fill"
+        }
+        // Food
+        if ["food", "meal", "dish", "pizza", "burger"].contains(where: { lowercased.contains($0) }) {
+            return "fork.knife"
+        }
+        // Person
+        if ["person", "people", "portrait", "selfie", "face"].contains(where: { lowercased.contains($0) }) {
+            return "person.fill"
+        }
+        // Default
+        return "photo.fill"
     }
 
     // 피드백 상태 헬퍼
@@ -976,14 +1014,14 @@ struct AIClassificationCard: View {
         VStack(alignment: .leading, spacing: Spacing.space4) {
             // Header
             HStack(spacing: Spacing.space3) {
-                // Icon
+                // Category Icon
                 ZStack {
                     Circle()
-                        .fill(LinearGradient(colors: [Color.ds.aiGradientStart, Color.ds.aiGradientEnd], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(Color.ds.secondary.opacity(0.15))
                         .frame(width: 48, height: 48)
                     Image(systemName: categoryIcon)
                         .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.ds.secondary)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -991,16 +1029,16 @@ struct AIClassificationCard: View {
                         Text(label)
                             .typography(.title3, color: .ds.textPrimary)
                             .lineLimit(1)
-                        // AI Badge
-                        HStack(spacing: 2) {
-                            Image(systemName: "sparkles").font(.system(size: 8, weight: .bold))
-                            Text("AI").font(.system(size: 9, weight: .bold))
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(LinearGradient(colors: [Color.ds.aiGradientStart, Color.ds.aiGradientEnd], startPoint: .leading, endPoint: .trailing))
-                        .clipShape(Capsule())
+                        // Simple AI Badge
+                        Text("AI")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(Color.ds.textSecondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule()
+                                    .strokeBorder(Color.ds.border, lineWidth: 1)
+                            )
                     }
                     Text(status == .processing ? "Classifying..." : "AI Classification")
                         .typography(.caption1, color: .ds.textSecondary)

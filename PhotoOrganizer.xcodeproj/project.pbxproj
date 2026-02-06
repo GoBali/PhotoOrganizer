@@ -47,7 +47,6 @@
 		AA0004012C0000040029267F /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0004002C0000040029267F /* LibraryView.swift */; };
 		AA0004032C0000040029267F /* PhotoGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0004022C0000040029267F /* PhotoGridView.swift */; };
 		AA0004052C0000040029267F /* PhotoDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0004042C0000040029267F /* PhotoDetailView.swift */; };
-		BB0005012C0000500029267F /* MyImageClassifier.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = BB0005002C0000500029267F /* MyImageClassifier.mlmodel */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -112,7 +111,6 @@
 		AA0004002C0000040029267F /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		AA0004022C0000040029267F /* PhotoGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoGridView.swift; sourceTree = "<group>"; };
 		AA0004042C0000040029267F /* PhotoDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoDetailView.swift; sourceTree = "<group>"; };
-		BB0005002C0000500029267F /* MyImageClassifier.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = MyImageClassifier.mlmodel; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -168,7 +166,6 @@
 				DD0001002C0000010029267F /* PlatformImage.swift */,
 				476E423C2BF0941D0029267F /* ContentView.swift */,
 				AA0001002C0000010029267F /* ImagePicker.swift */,
-				BB0005002C0000500029267F /* MyImageClassifier.mlmodel */,
 				AA0010002C0000100029267F /* DesignSystem */,
 				AA0011002C0000110029267F /* Components */,
 				AA0012002C0000120029267F /* Features */,
@@ -532,7 +529,6 @@
 				47C2536E2F245E0900810F9A /* ThemeManager.swift in Sources */,
 				AA0004032C0000040029267F /* PhotoGridView.swift in Sources */,
 				AA0004052C0000040029267F /* PhotoDetailView.swift in Sources */,
-				BB0005012C0000500029267F /* MyImageClassifier.mlmodel in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
