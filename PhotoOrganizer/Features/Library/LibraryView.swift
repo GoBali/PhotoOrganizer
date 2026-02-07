@@ -154,7 +154,7 @@ struct LibraryView: View {
     @ViewBuilder
     private var importingOverlay: some View {
         if library.isImporting {
-            LoadingIndicator("Importing...", style: .toast)
+            ImportProgressToast(progress: library.importProgress)
                 .padding(.bottom, Spacing.space6 + 56)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
         }
@@ -163,35 +163,42 @@ struct LibraryView: View {
     // MARK: - Category Items
 
     private var categoryItems: [CategoryItem] {
-        let options = library.categoryOptions(from: photos)
-        return options.map { category in
-            let count = countPhotos(for: category)
-            return CategoryItem(name: category, count: count)
-        }
-    }
+        var unclassifiedCount = 0
+        var labelCounts: [String: Int] = [:]
+        var cityCounts: [String: Int] = [:]
+        var predictedCounts: [String: Int] = [:]
 
-    private func countPhotos(for category: String) -> Int {
-        photos.filter { photo in
-            if category == "All" {
-                return true
-            } else if category == "Unclassified" {
-                let label = photo.classificationLabel?.trimmingCharacters(in: .whitespacesAndNewlines)
-                let hasLocation = photo.city?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-                let hasPredicted = photo.predictedLocation?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-                return (label?.isEmpty ?? true) && !hasLocation && !hasPredicted
-            } else if category.hasPrefix("📍 ") {
-                // GPS 위치 카테고리
-                let cityName = String(category.dropFirst(2))
-                return photo.city?.trimmingCharacters(in: .whitespacesAndNewlines) == cityName
-            } else if category.hasPrefix("✨ ") {
-                // 예측 위치 카테고리
-                let predicted = String(category.dropFirst(2))
-                return photo.predictedLocation?.trimmingCharacters(in: .whitespacesAndNewlines) == predicted
-            } else {
-                // ML 분류 카테고리
-                return photo.classificationLabel == category
+        for photo in photos {
+            let label = photo.classificationLabel?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let city = photo.city?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let predicted = photo.predictedLocation?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let hasLabel = !(label?.isEmpty ?? true)
+            let hasCity = !(city?.isEmpty ?? true)
+            let hasPredicted = !(predicted?.isEmpty ?? true)
+
+            if !hasLabel && !hasCity && !hasPredicted {
+                unclassifiedCount += 1
             }
-        }.count
+            if hasLabel, let label {
+                labelCounts[label, default: 0] += 1
+            }
+            if hasCity, let city {
+                cityCounts[city, default: 0] += 1
+            }
+            if hasPredicted, let predicted {
+                predictedCounts[predicted, default: 0] += 1
+            }
+        }
+
+        var items = [
+            CategoryItem(name: "All", count: photos.count),
+            CategoryItem(name: "Unclassified", count: unclassifiedCount)
+        ]
+        items += cityCounts.keys.sorted().map { CategoryItem(name: "📍 \($0)", count: cityCounts[$0]!) }
+        items += predictedCounts.keys.sorted().map { CategoryItem(name: "✨ \($0)", count: predictedCounts[$0]!) }
+        items += labelCounts.keys.sorted().map { CategoryItem(name: $0, count: labelCounts[$0]!) }
+
+        return items
     }
 
     // MARK: - Empty State

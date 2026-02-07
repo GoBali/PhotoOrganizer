@@ -302,38 +302,36 @@ enum TravelPlaceCategory: String, CaseIterable {
     case indoor = "Indoor"
     case unknown = "Unknown"
 
+    /// 카테고리별 키워드 (Vision 라벨 매칭용, 부분 일치)
+    var keywords: [String] {
+        switch self {
+        case .beach: return ["beach", "shore", "coast", "seashore", "sandbar", "ocean", "sea"]
+        case .mountain: return ["mountain", "hill", "canyon", "cliff", "valley", "alp", "volcano", "peak"]
+        case .forest: return ["forest", "jungle", "woodland", "tree", "rainforest"]
+        case .city: return ["city", "street", "building", "urban", "downtown", "skyscraper", "bridge", "highway", "tower"]
+        case .lake: return ["lake", "river", "waterfall", "pond", "stream", "reservoir"]
+        case .park: return ["park", "garden", "field", "meadow", "lawn", "plaza"]
+        case .indoor: return ["restaurant", "cafe", "museum", "hotel", "room", "indoor", "interior", "lobby", "kitchen", "bedroom", "bathroom", "airport"]
+        case .unknown: return []
+        }
+    }
+
+    /// 모든 카테고리의 키워드 통합 (VisionLocationClassifier 필터링용)
+    static let allKeywords: Set<String> = {
+        var keywords = Set<String>()
+        for category in TravelPlaceCategory.allCases where category != .unknown {
+            keywords.formUnion(category.keywords)
+        }
+        return keywords
+    }()
+
     static func from(visionLabel: String) -> TravelPlaceCategory {
         let label = visionLabel.lowercased()
-
-        // Beach 관련
-        if ["beach", "shore", "coast", "seashore", "sandbar"].contains(where: { label.contains($0) }) {
-            return .beach
+        for category in TravelPlaceCategory.allCases where category != .unknown {
+            if category.keywords.contains(where: { label.contains($0) }) {
+                return category
+            }
         }
-        // Mountain 관련
-        if ["mountain", "hill", "canyon", "cliff", "valley", "alp", "volcano"].contains(where: { label.contains($0) }) {
-            return .mountain
-        }
-        // Forest 관련
-        if ["forest", "jungle", "woodland", "tree", "rainforest"].contains(where: { label.contains($0) }) {
-            return .forest
-        }
-        // City 관련
-        if ["city", "street", "building", "urban", "downtown", "skyscraper", "bridge", "highway"].contains(where: { label.contains($0) }) {
-            return .city
-        }
-        // Lake 관련
-        if ["lake", "river", "waterfall", "pond", "stream", "reservoir"].contains(where: { label.contains($0) }) {
-            return .lake
-        }
-        // Park 관련
-        if ["park", "garden", "field", "meadow", "lawn", "plaza"].contains(where: { label.contains($0) }) {
-            return .park
-        }
-        // Indoor 관련
-        if ["restaurant", "cafe", "museum", "hotel", "room", "indoor", "interior", "lobby", "kitchen", "bedroom", "bathroom"].contains(where: { label.contains($0) }) {
-            return .indoor
-        }
-
         return .unknown
     }
 }
@@ -531,6 +529,12 @@ final class PhotoLibraryStore: ObservableObject {
     private let logger = Logger(subsystem: "PhotoOrganizer", category: "PhotoLibraryStore")
     private let imageClassifier = VisionImageClassifier()
     private let locationClassifier = VisionLocationClassifier()
+    private let thumbnailCache: NSCache<NSString, PlatformImage> = {
+        let cache = NSCache<NSString, PlatformImage>()
+        cache.countLimit = 200
+        cache.totalCostLimit = 50 * 1024 * 1024 // 50MB
+        return cache
+    }()
 
     let context: NSManagedObjectContext
     let fileStore: PhotoFileStore
@@ -634,11 +638,17 @@ final class PhotoLibraryStore: ObservableObject {
         guard !items.isEmpty else { return }
         guard !isImporting else { return }
         isImporting = true
+        importProgress = .importing(current: 0, total: items.count)
         lastError = nil
 
-        defer { isImporting = false }
+        defer {
+            isImporting = false
+            importProgress = .idle
+        }
 
-        for item in items {
+        var importedCount = 0
+        for (index, item) in items.enumerated() {
+            importProgress = .importing(current: index + 1, total: items.count)
             do {
                 guard let data = try await item.loadTransferable(type: Data.self) else { continue }
                 guard let image = PlatformImageCoder.image(from: data) else { continue }
@@ -653,6 +663,7 @@ final class PhotoLibraryStore: ObservableObject {
                 } else {
                     await predictLocation(photo: asset, image: image)
                 }
+                importedCount += 1
             } catch {
                 logger.error("Import failed: \(error.localizedDescription)")
                 lastError = "Failed to import one or more photos."
@@ -664,11 +675,16 @@ final class PhotoLibraryStore: ObservableObject {
         guard !urls.isEmpty else { return }
         guard !isImporting else { return }
         isImporting = true
+        importProgress = .importing(current: 0, total: urls.count)
         lastError = nil
 
-        defer { isImporting = false }
+        defer {
+            isImporting = false
+            importProgress = .idle
+        }
 
-        for url in urls {
+        for (index, url) in urls.enumerated() {
+            importProgress = .importing(current: index + 1, total: urls.count)
             do {
                 #if os(macOS)
                 let accessed = url.startAccessingSecurityScopedResource()
@@ -712,7 +728,7 @@ final class PhotoLibraryStore: ObservableObject {
 
         // 결과 비교
         let changed = photo.classificationLabel != previousLabel ||
-                      abs(photo.classificationConfidence - previousConfidence) > 0.01
+                      abs(photo.classificationConfidence - previousConfidence) > ClassificationThreshold.confidenceChangeDelta
         let success = photo.classificationStateValue == .completed
 
         return ReclassifyResult(success: success, changed: changed)
@@ -808,15 +824,27 @@ final class PhotoLibraryStore: ObservableObject {
 
     func thumbnail(for photo: PhotoAsset, size: CGSize) async -> PlatformImage? {
         guard let fileName = photo.fileName else { return nil }
+        let cacheKey = "\(fileName)_\(Int(size.width))x\(Int(size.height))" as NSString
+
+        if let cached = thumbnailCache.object(forKey: cacheKey) {
+            return cached
+        }
+
         let fileStore = self.fileStore
-        return await withCheckedContinuation { continuation in
+        let image: PlatformImage? = await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {
                 let image = fileStore.loadThumbnail(named: fileName, size: size)
-                DispatchQueue.main.async {  // Main thread로 복귀
+                DispatchQueue.main.async {
                     continuation.resume(returning: image)
                 }
             }
         }
+
+        if let image {
+            let cost = image.estimatedMemoryCost
+            thumbnailCache.setObject(image, forKey: cacheKey, cost: cost)
+        }
+        return image
     }
 
     func image(for photo: PhotoAsset) async -> PlatformImage? {
@@ -885,7 +913,7 @@ final class PhotoLibraryStore: ObservableObject {
             let result = try await locationClassifier.classify(image: image)
 
             // 신뢰도 임계값 이상인 경우만 저장
-            if result.confidence >= 0.15, result.category != .unknown {
+            if result.confidence >= ClassificationThreshold.locationPrediction, result.category != .unknown {
                 photo.predictedLocation = result.category.rawValue
                 photo.predictedLocationConfidence = result.confidence
                 logger.info("Location predicted: \(result.category.rawValue) (\(result.confidence))")
@@ -1102,24 +1130,7 @@ final class VisionImageClassifier: @unchecked Sendable {
 
 final class VisionLocationClassifier: @unchecked Sendable {
     private static let logger = Logger(subsystem: "PhotoOrganizer", category: "VisionLocation")
-
-    // 여행지 관련 키워드 필터 (VNClassifyImageRequest 결과에서 필터링)
-    private static let placeKeywords: Set<String> = [
-        // Beach
-        "beach", "shore", "coast", "seashore", "sandbar", "ocean", "sea",
-        // Mountain
-        "mountain", "hill", "canyon", "cliff", "valley", "alp", "volcano", "peak",
-        // Forest
-        "forest", "jungle", "woodland", "rainforest",
-        // City
-        "street", "building", "skyscraper", "bridge", "highway", "tower",
-        // Lake
-        "lake", "river", "waterfall", "pond", "stream", "reservoir",
-        // Park
-        "park", "garden", "field", "meadow", "lawn", "plaza",
-        // Indoor
-        "restaurant", "cafe", "museum", "hotel", "room", "lobby", "kitchen", "bedroom", "bathroom", "airport"
-    ]
+    private static let classificationQueue = DispatchQueue(label: "com.photoorganizer.location-classification", qos: .userInitiated)
 
     func classify(image: PlatformImage) async throws -> LocationClassificationResult {
         guard let cgImage = image.cgImageRepresentation else {
@@ -1129,52 +1140,48 @@ final class VisionLocationClassifier: @unchecked Sendable {
         return try await withCheckedThrowingContinuation { continuation in
             let safeContinuation = SafeContinuation(continuation)
 
-            let request = VNClassifyImageRequest { request, error in
-                if let error = error {
-                    Self.logger.error("VNClassifyImageRequest failed: \(error.localizedDescription)")
+            Self.classificationQueue.async {
+                let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+                let request = VNClassifyImageRequest()
+
+                #if targetEnvironment(simulator) || os(macOS)
+                request.usesCPUOnly = true
+                #endif
+
+                do {
+                    try handler.perform([request])
+
+                    guard let results = request.results else {
+                        safeContinuation.resume(throwing: LocationClassifierError.noResults)
+                        return
+                    }
+
+                    // 여행지 관련 결과만 필터링 (TravelPlaceCategory 통합 키워드, 부분 일치)
+                    let placeResults = results.filter { observation in
+                        let id = observation.identifier.lowercased()
+                        return TravelPlaceCategory.allKeywords.contains(where: { id.contains($0) })
+                    }
+
+                    if let topResult = placeResults.first, topResult.confidence >= Float(ClassificationThreshold.locationPrediction) {
+                        let category = TravelPlaceCategory.from(visionLabel: topResult.identifier)
+                        Self.logger.info("Location predicted: \(topResult.identifier) -> \(category.rawValue) (\(topResult.confidence))")
+                        safeContinuation.resume(returning: LocationClassificationResult(
+                            label: topResult.identifier,
+                            confidence: Double(topResult.confidence),
+                            category: category
+                        ))
+                    } else {
+                        Self.logger.info("No place-related classification found")
+                        safeContinuation.resume(returning: LocationClassificationResult(
+                            label: nil,
+                            confidence: 0,
+                            category: .unknown
+                        ))
+                    }
+                } catch {
+                    Self.logger.error("VNImageRequestHandler failed: \(error.localizedDescription)")
                     safeContinuation.resume(throwing: error)
-                    return
                 }
-
-                guard let results = request.results as? [VNClassificationObservation] else {
-                    safeContinuation.resume(throwing: LocationClassifierError.noResults)
-                    return
-                }
-
-                // 여행지 관련 결과만 필터링 (신뢰도 순 정렬됨)
-                let placeResults = results.filter { observation in
-                    Self.placeKeywords.contains(observation.identifier.lowercased())
-                }
-
-                if let topResult = placeResults.first, topResult.confidence >= 0.15 {
-                    let category = TravelPlaceCategory.from(visionLabel: topResult.identifier)
-                    Self.logger.info("Location predicted: \(topResult.identifier) -> \(category.rawValue) (\(topResult.confidence))")
-                    safeContinuation.resume(returning: LocationClassificationResult(
-                        label: topResult.identifier,
-                        confidence: Double(topResult.confidence),
-                        category: category
-                    ))
-                } else {
-                    Self.logger.info("No place-related classification found")
-                    safeContinuation.resume(returning: LocationClassificationResult(
-                        label: nil,
-                        confidence: 0,
-                        category: .unknown
-                    ))
-                }
-            }
-
-            // Simulator/macOS에서는 Neural Engine이 없으므로 CPU만 사용
-            #if targetEnvironment(simulator) || os(macOS)
-            request.usesCPUOnly = true
-            #endif
-
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-            do {
-                try handler.perform([request])
-            } catch {
-                Self.logger.error("VNImageRequestHandler failed: \(error.localizedDescription)")
-                safeContinuation.resume(throwing: error)
             }
         }
     }

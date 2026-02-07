@@ -57,6 +57,11 @@ extension PlatformImage {
         return NSImage(cgImage: cgImage, size: CGSize(width: cgImage.width, height: cgImage.height))
         #endif
     }
+
+    var estimatedMemoryCost: Int {
+        guard let cg = cgImageRepresentation else { return 0 }
+        return cg.bytesPerRow * cg.height
+    }
 }
 
 #if canImport(UIKit)
@@ -121,20 +126,19 @@ struct PlatformImageCoder {
     }
 
     private static func makeImage(from source: CGImageSource, maxPixelSize: Int?) -> PlatformImage? {
-        let resolvedMaxPixelSize = maxPixelSize ?? self.maxPixelSize(from: source)
-        guard let cgImage = makeCGImage(from: source, maxPixelSize: resolvedMaxPixelSize) else { return nil }
+        guard let cgImage = makeCGImage(from: source, maxPixelSize: maxPixelSize) else { return nil }
         return PlatformImage.from(cgImage: cgImage)
     }
 
     private static func makeCGImage(from source: CGImageSource, maxPixelSize: Int?) -> CGImage? {
-        guard let maxPixelSize else {
-            return CGImageSourceCreateImageAtIndex(source, 0, nil)
-        }
-        let options: [CFString: Any] = [
+        var options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
+            kCGImageSourceCreateThumbnailWithTransform: true
         ]
+        let resolvedSize = maxPixelSize ?? self.maxPixelSize(from: source)
+        if let resolvedSize {
+            options[kCGImageSourceThumbnailMaxPixelSize] = resolvedSize
+        }
         return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
     }
 

@@ -325,3 +325,31 @@ extension View {
         )
     }
 }
+
+// MARK: - Classification Constants
+
+enum ClassificationThreshold {
+    static let locationPrediction: Double = 0.15
+    static let confidenceChangeDelta: Double = 0.01
+}
+
+// MARK: - Bottom Sheet Constants
+
+enum BottomSheetRatio {
+    static let collapsed: CGFloat = 0.18
+    static let half: CGFloat = 0.45
+    static let expanded: CGFloat = 0.85
+}
+
+// MARK: - Grid Configuration
+
+enum GridConfig {
+    static let iOSMinColumns = 1
+    static let iOSMaxColumns = 4
+    static let macOSMinColumns = 2
+    static let macOSMaxColumns = 6
+    static let zoomOutThreshold: CGFloat = 1.3
+    static let zoomInThreshold: CGFloat = 0.7
+    static let simulatorZoomOutThreshold: CGFloat = 1.01
+    static let simulatorZoomInThreshold: CGFloat = 0.99
+}

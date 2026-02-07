@@ -206,9 +206,9 @@ struct PhotoGridView: View {
                 #if os(iOS)
                 // iOS: LazyVGrid 사용 (고정 비율 카드에 적합)
                 LazyVGrid(columns: gridColumns, spacing: Spacing.space2) {
-                    ForEach(photos) { photo in
+                    ForEach(Array(photos.enumerated()), id: \.element.id) { index, photo in
                         NavigationLink {
-                            PhotoDetailView(photo: photo)
+                            PhotoDetailView(photos: photos, initialIndex: index)
                                 .environmentObject(library)
                         } label: {
                             PhotoGridItemView(photo: photo)
@@ -228,7 +228,7 @@ struct PhotoGridView: View {
                 // macOS: MasonryGrid 유지 (다양한 이미지 비율 지원)
                 MasonryGrid(data: photos, columns: library.gridColumns, spacing: Spacing.space2) { photo in
                     NavigationLink {
-                        PhotoDetailView(photo: photo)
+                        PhotoDetailView(photos: photos, initialIndex: photos.firstIndex(of: photo) ?? 0)
                             .environmentObject(library)
                     } label: {
                         PhotoGridItemView(photo: photo)
@@ -276,21 +276,20 @@ struct PhotoGridView: View {
     /// 핀치 종료 시 열 수 조정 로직 (iOS/macOS 공통)
     private func handlePinchEnd(scale: CGFloat) {
         #if os(iOS)
-        let minColumns = 1  // iOS: 최소 1열
-        let maxColumns = 4  // iOS: 최대 4열
+        let minColumns = GridConfig.iOSMinColumns
+        let maxColumns = GridConfig.iOSMaxColumns
         #if targetEnvironment(simulator)
-        // 시뮬레이터(옵션 키 핀치)에서는 scale 변화폭이 작게 들어오는 경우가 있어 임계값을 낮게 잡는다.
-        let zoomOutThreshold: CGFloat = 1.01
-        let zoomInThreshold: CGFloat = 0.99
+        let zoomOutThreshold = GridConfig.simulatorZoomOutThreshold
+        let zoomInThreshold = GridConfig.simulatorZoomInThreshold
         #else
-        let zoomOutThreshold: CGFloat = 1.3
-        let zoomInThreshold: CGFloat = 0.7
+        let zoomOutThreshold = GridConfig.zoomOutThreshold
+        let zoomInThreshold = GridConfig.zoomInThreshold
         #endif
         #else
-        let minColumns = 2  // macOS: 최소 2열
-        let maxColumns = 6  // macOS: 최대 6열
-        let zoomOutThreshold: CGFloat = 1.3
-        let zoomInThreshold: CGFloat = 0.7
+        let minColumns = GridConfig.macOSMinColumns
+        let maxColumns = GridConfig.macOSMaxColumns
+        let zoomOutThreshold = GridConfig.zoomOutThreshold
+        let zoomInThreshold = GridConfig.zoomInThreshold
         #endif
 
         // 핀치 아웃 (벌리기) → 컬럼 감소 → 이미지 커짐
