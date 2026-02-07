@@ -113,6 +113,44 @@ struct LoadingIndicator: View {
     }
 }
 
+// MARK: - Import Progress Toast
+
+struct ImportProgressToast: View {
+    let progress: ImportProgress
+
+    var body: some View {
+        HStack(spacing: Spacing.space2) {
+            ProgressView()
+                .scaleEffect(0.85)
+                .tint(Color.ds.textPrimary)
+
+            if case .importing(let current, let total) = progress {
+                Text("Importing \(current)/\(total)...")
+                    .typography(.callout, color: .ds.textPrimary)
+                    .contentTransition(.numericText())
+            } else {
+                Text("Importing...")
+                    .typography(.callout, color: .ds.textPrimary)
+            }
+
+            Spacer()
+
+            if let progressValue = progress.progress {
+                Text("\(Int(progressValue * 100))%")
+                    .typography(.caption1, color: .ds.textSecondary)
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+            }
+        }
+        .padding(.horizontal, Spacing.space4)
+        .padding(.vertical, Spacing.space3)
+        .background(Color.ds.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
+        .elevation(.medium)
+        .animation(.easeInOut(duration: AnimationDuration.fast), value: progress)
+    }
+}
+
 // MARK: - Preview
 
 #Preview("Full Screen Loading") {

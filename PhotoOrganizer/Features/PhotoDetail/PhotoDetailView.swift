@@ -18,9 +18,9 @@ enum BottomSheetState: CaseIterable {
 
     var heightRatio: CGFloat {
         switch self {
-        case .collapsed: return 0.18
-        case .half: return 0.45
-        case .expanded: return 0.85
+        case .collapsed: return BottomSheetRatio.collapsed
+        case .half: return BottomSheetRatio.half
+        case .expanded: return BottomSheetRatio.expanded
         }
     }
 }
@@ -41,7 +41,9 @@ struct PhotoDetailView: View {
     @EnvironmentObject private var library: PhotoLibraryStore
     @Environment(\.dismiss) private var dismiss
 
-    @ObservedObject var photo: PhotoAsset
+    let photos: [PhotoAsset]
+    @State private var currentIndex: Int
+    private var photo: PhotoAsset { photos[currentIndex] }
 
     // UI State
     @State private var newTag = ""
@@ -64,9 +66,24 @@ struct PhotoDetailView: View {
     @State private var swipeOffset: CGFloat = 0
     @State private var isDraggingImage = false
 
+    // Note Debounce
+    @State private var noteDebounceTask: Task<Void, Never>?
+
     // Action Feedback State
     @State private var reclassifyFeedback: ActionFeedbackState = .idle
     @State private var locationFeedback: ActionFeedbackState = .idle
+
+    // MARK: - Initializers
+
+    init(photos: [PhotoAsset], initialIndex: Int) {
+        self.photos = photos
+        self._currentIndex = State(initialValue: max(0, min(initialIndex, photos.count - 1)))
+    }
+
+    init(photo: PhotoAsset) {
+        self.photos = [photo]
+        self._currentIndex = State(initialValue: 0)
+    }
 
     // MARK: - Computed Properties
 
@@ -124,7 +141,18 @@ struct PhotoDetailView: View {
             noteText = photo.note ?? ""
         }
         .onChange(of: noteText) { _, newValue in
-            library.updateNote(newValue, for: photo)
+            noteDebounceTask?.cancel()
+            noteDebounceTask = Task {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                guard !Task.isCancelled else { return }
+                library.updateNote(newValue, for: photo)
+            }
+        }
+        .onDisappear {
+            noteDebounceTask?.cancel()
+            if noteText != (photo.note ?? "") {
+                library.updateNote(noteText, for: photo)
+            }
         }
         .confirmationDialog("Delete this photo?", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) {
@@ -240,17 +268,45 @@ struct PhotoDetailView: View {
     }
 
     private func navigateToPreviousPhoto() {
+        guard currentIndex > 0 else { return }
         #if os(iOS)
         HapticStyle.light.trigger()
         #endif
-        // 이전 사진으로 이동하는 로직 (추후 구현)
+        saveUnsavedNote()
+        withAnimation(Motion.spring()) {
+            currentIndex -= 1
+        }
+        reloadPhotoState()
     }
 
     private func navigateToNextPhoto() {
+        guard currentIndex < photos.count - 1 else { return }
         #if os(iOS)
         HapticStyle.light.trigger()
         #endif
-        // 다음 사진으로 이동하는 로직 (추후 구현)
+        saveUnsavedNote()
+        withAnimation(Motion.spring()) {
+            currentIndex += 1
+        }
+        reloadPhotoState()
+    }
+
+    private func saveUnsavedNote() {
+        noteDebounceTask?.cancel()
+        if noteText != (photo.note ?? "") {
+            library.updateNote(noteText, for: photo)
+        }
+    }
+
+    private func reloadPhotoState() {
+        image = nil
+        platformImage = nil
+        noteText = photo.note ?? ""
+        newTag = ""
+        filteredTags = []
+        showAutoComplete = false
+        reclassifyFeedback = .idle
+        locationFeedback = .idle
     }
 
     // MARK: - Full Screen Image View

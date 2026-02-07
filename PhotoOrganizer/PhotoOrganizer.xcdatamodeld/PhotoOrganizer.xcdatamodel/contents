@@ -5,7 +5,7 @@
         <attribute name="classificationConfidence" optional="NO" attributeType="Double" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="classificationError" optional="YES" attributeType="String"/>
         <attribute name="classificationLabel" optional="YES" attributeType="String" renamingIdentifier="category"/>
-        <attribute name="classificationState" optional="NO" attributeType="Integer 16" defaultValueString="2" usesScalarValueType="YES"/>
+        <attribute name="classificationState" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="country" optional="YES" attributeType="String"/>
         <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" renamingIdentifier="timestamp"/>
         <attribute name="fileName" optional="NO" attributeType="String" renamingIdentifier="imageName"/>
