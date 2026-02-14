@@ -2,7 +2,7 @@
 //  LibraryView.swift
 //  PhotoOrganizer
 //
-//  Main library view with photo grid and filtering
+//  Main library view with card feed layout and filtering
 //
 
 import CoreData
@@ -26,19 +26,26 @@ struct LibraryView: View {
     @State private var showReclassifyAllConfirm = false
     @State private var isReclassifyingAll = false
     @State private var reclassifyProgress: (current: Int, total: Int)?
-    @State private var isFabExpanded = true
-    @State private var scrollOffset: CGFloat = 0
 
     var body: some View {
         NavigationStack {
-            mainContent
-                .navigationTitle("Photo Organizer")
-                #if os(iOS)
-                .navigationBarTitleDisplayMode(.inline)
-                #endif
-                .searchable(text: $library.searchText, prompt: "Search tags, notes, or labels")
-                .toolbar { toolbarContent }
-                .overlay(alignment: .bottom) { importingOverlay }
+            ZStack {
+                Color.ds.background.ignoresSafeArea()
+
+                if filteredPhotos.isEmpty {
+                    emptyStateView
+                        .frame(maxHeight: .infinity)
+                } else {
+                    feedContent
+                }
+            }
+            .navigationTitle("Feed")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.large)
+            #endif
+            .searchable(text: $library.searchText, prompt: "Search tags, notes, or labels")
+            .toolbar { toolbarContent }
+            .overlay(alignment: .bottom) { importingOverlay }
         }
         .onChange(of: pickerSelection, handlePickerChange)
         #if os(macOS)
@@ -71,92 +78,109 @@ struct LibraryView: View {
         .animation(.easeInOut(duration: AnimationDuration.normal), value: library.isImporting)
     }
 
-    // MARK: - Main Content
+    private var filteredPhotos: [PhotoAsset] {
+        library.filteredPhotos(from: photos)
+    }
 
-    @ViewBuilder
-    private var mainContent: some View {
-        ZStack {
-            Color.ds.background
-                .ignoresSafeArea()
+    // MARK: - Feed Content
 
+    private var feedContent: some View {
+        ScrollView {
             VStack(spacing: 0) {
-                categoryFilterBar
-                contentArea
-            }
+                CategoryFilterBar(
+                    categories: categoryItems,
+                    selectedCategory: $library.selectedCategory
+                )
+                .padding(.bottom, Spacing.space3)
 
+                if library.gridColumns == 1 {
+                    feedLayout
+                } else {
+                    gridLayout
+                }
+            }
+            .padding(.bottom, Spacing.space7)
+        }
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: library.gridColumns)
+        .onTapGesture(count: 2) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                #if os(iOS)
+                library.gridColumns = (library.gridColumns % GridConfig.iOSMaxColumns) + 1
+                #else
+                library.gridColumns = library.gridColumns >= GridConfig.macOSMaxColumns ? 1 : library.gridColumns + 1
+                #endif
+            }
             #if os(iOS)
-            floatingActionButton
+            HapticStyle.light.trigger()
             #endif
         }
     }
 
-    // MARK: - Category Filter Bar
+    // MARK: - 1-Column Feed Layout
 
-    private var categoryFilterBar: some View {
-        #if os(iOS)
-        CategoryFilterBar(
-            categories: categoryItems,
-            selectedCategory: $library.selectedCategory
-        )
-        .background(Color.ds.background)
-        #else
-        HStack(spacing: 0) {
-            CategoryFilterBar(
-                categories: categoryItems,
-                selectedCategory: $library.selectedCategory
-            )
-
-            ReclassifyAllButton(
-                isReclassifying: isReclassifyingAll,
-                isDisabled: photos.isEmpty
-            ) {
-                showReclassifyAllConfirm = true
-            }
-            .padding(.trailing, Spacing.space3)
-        }
-        .background(Color.ds.background)
-        #endif
-    }
-
-    // MARK: - Content Area
-
-    @ViewBuilder
-    private var contentArea: some View {
-        let filtered = library.filteredPhotos(from: photos)
-        if filtered.isEmpty {
-            emptyStateView
-                .frame(maxHeight: .infinity)
-        } else {
-            PhotoGridView(photos: filtered)
-        }
-    }
-
-    // MARK: - Floating Action Button (iOS)
-
-    #if os(iOS)
-    private var floatingActionButton: some View {
-        VStack {
-            Spacer()
-            HStack {
-                Spacer()
-                PhotosPicker(selection: $pickerSelection, maxSelectionCount: 25, matching: .images) {
-                    DynamicFAB(isExpanded: isFabExpanded)
+    private var feedLayout: some View {
+        LazyVStack(spacing: Spacing.space5) {
+            ForEach(Array(filteredPhotos.enumerated()), id: \.element.id) { index, photo in
+                photoNavigationLink(photo: photo, index: index) {
+                    FeedCardItem(photo: photo)
                 }
-                .padding(.trailing, Spacing.space4)
-                .padding(.bottom, Spacing.space4)
             }
         }
+        .padding(.horizontal, Spacing.space4)
     }
-    #endif
 
-    // MARK: - Importing Overlay
+    // MARK: - Multi-Column Grid Layout
+
+    private var gridLayout: some View {
+        let spacing = library.gridColumns >= 3 ? Spacing.space1 : Spacing.space2
+        return LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: spacing), count: library.gridColumns),
+            spacing: spacing
+        ) {
+            ForEach(Array(filteredPhotos.enumerated()), id: \.element.id) { index, photo in
+                photoNavigationLink(photo: photo, index: index) {
+                    GridCardItem(photo: photo, columns: library.gridColumns)
+                }
+            }
+        }
+        .padding(.horizontal, library.gridColumns >= 3 ? Spacing.space1 : Spacing.space3)
+    }
+
+    // MARK: - Shared Navigation Link
+
+    private func photoNavigationLink<Content: View>(
+        photo: PhotoAsset,
+        index: Int,
+        @ViewBuilder label: () -> Content
+    ) -> some View {
+        NavigationLink {
+            PhotoDetailView(photos: filteredPhotos, initialIndex: index)
+                .environmentObject(library)
+        } label: {
+            label()
+        }
+        .buttonStyle(PhotoCardButtonStyle())
+        .contextMenu {
+            contextMenuItems(for: photo)
+        }
+    }
+
+    // MARK: - Context Menu
 
     @ViewBuilder
-    private var importingOverlay: some View {
-        if library.isImporting {
-            ImportProgressToast(progress: library.importProgress)
-                .padding(.bottom, Spacing.space6 + 56)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+    private func contextMenuItems(for photo: PhotoAsset) -> some View {
+        Button {
+            Task { await library.reclassify(photo) }
+        } label: {
+            Label("Reclassify", systemImage: "arrow.triangle.2.circlepath")
+        }
+
+        Divider()
+
+        Button(role: .destructive) {
+            library.delete(photo)
+        } label: {
+            Label("Delete", systemImage: "trash")
         }
     }
 
@@ -176,28 +200,19 @@ struct LibraryView: View {
             let hasCity = !(city?.isEmpty ?? true)
             let hasPredicted = !(predicted?.isEmpty ?? true)
 
-            if !hasLabel && !hasCity && !hasPredicted {
-                unclassifiedCount += 1
-            }
-            if hasLabel, let label {
-                labelCounts[label, default: 0] += 1
-            }
-            if hasCity, let city {
-                cityCounts[city, default: 0] += 1
-            }
-            if hasPredicted, let predicted {
-                predictedCounts[predicted, default: 0] += 1
-            }
+            if !hasLabel && !hasCity && !hasPredicted { unclassifiedCount += 1 }
+            if hasLabel, let label { labelCounts[label, default: 0] += 1 }
+            if hasCity, let city { cityCounts[city, default: 0] += 1 }
+            if hasPredicted, let predicted { predictedCounts[predicted, default: 0] += 1 }
         }
 
         var items = [
             CategoryItem(name: "All", count: photos.count),
             CategoryItem(name: "Unclassified", count: unclassifiedCount)
         ]
-        items += cityCounts.keys.sorted().map { CategoryItem(name: "📍 \($0)", count: cityCounts[$0]!) }
-        items += predictedCounts.keys.sorted().map { CategoryItem(name: "✨ \($0)", count: predictedCounts[$0]!) }
+        items += cityCounts.keys.sorted().map { CategoryItem(name: "\u{1F4CD} \($0)", count: cityCounts[$0]!) }
+        items += predictedCounts.keys.sorted().map { CategoryItem(name: "\u{2728} \($0)", count: predictedCounts[$0]!) }
         items += labelCounts.keys.sorted().map { CategoryItem(name: $0, count: labelCounts[$0]!) }
-
         return items
     }
 
@@ -214,28 +229,45 @@ struct LibraryView: View {
         }
     }
 
+    // MARK: - Importing Overlay
+
+    @ViewBuilder
+    private var importingOverlay: some View {
+        if library.isImporting {
+            ImportProgressToast(progress: library.importProgress)
+                .padding(.bottom, Spacing.space6)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+
     // MARK: - Toolbar
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         #if os(iOS)
         ToolbarItem(placement: .navigationBarTrailing) {
-            Button {
-                showReclassifyAllConfirm = true
-            } label: {
-                if isReclassifyingAll {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                } else {
-                    Image(systemName: "arrow.triangle.2.circlepath")
+            HStack(spacing: Spacing.space2) {
+                Button {
+                    showReclassifyAllConfirm = true
+                } label: {
+                    if isReclassifyingAll {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                    }
+                }
+                .disabled(isReclassifyingAll || photos.isEmpty)
+
+                PhotosPicker(selection: $pickerSelection, maxSelectionCount: 25, matching: .images) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(Color.ds.secondary)
                 }
             }
-            .disabled(isReclassifyingAll || photos.isEmpty)
         }
         #elseif os(macOS)
         ToolbarItemGroup(placement: .automatic) {
-            CompactGridColumnPicker(columns: $library.gridColumns, range: 2...6)
-
             Button {
                 showReclassifyAllConfirm = true
             } label: {
@@ -277,9 +309,7 @@ struct LibraryView: View {
     private func handleFileImport(_ result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
-            Task {
-                await library.importFiles(from: urls)
-            }
+            Task { await library.importFiles(from: urls) }
         case .failure:
             library.lastError = "Failed to import one or more files."
         }
@@ -344,6 +374,290 @@ struct LibraryView: View {
     }
 }
 
+// MARK: - Feed Card Item
+
+struct FeedCardItem: View {
+    @ObservedObject var photo: PhotoAsset
+    @EnvironmentObject private var library: PhotoLibraryStore
+    @State private var image: Image?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            photoImageView
+            metadataSection
+        }
+        .elevation(.low)
+        .loadThumbnail(photo: photo, library: library, image: $image, size: 600)
+    }
+
+    // MARK: - Photo Image
+
+    private var photoImageView: some View {
+        ThumbnailImageView(image: image)
+            .aspectRatio(GridTokens.landscapeAspectRatio, contentMode: .fit)
+            .clipShape(
+                UnevenRoundedRectangle(
+                    topLeadingRadius: CornerRadius.large,
+                    bottomLeadingRadius: 0,
+                    bottomTrailingRadius: 0,
+                    topTrailingRadius: CornerRadius.large
+                )
+            )
+    }
+
+    // MARK: - Metadata Section
+
+    private var metadataSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.space2) {
+            classificationRow
+            locationRow
+            tagsRow
+            timestampRow
+        }
+        .padding(Spacing.space3)
+        .background(Color.ds.surface)
+        .clipShape(
+            UnevenRoundedRectangle(
+                topLeadingRadius: 0,
+                bottomLeadingRadius: CornerRadius.large,
+                bottomTrailingRadius: CornerRadius.large,
+                topTrailingRadius: 0
+            )
+        )
+    }
+
+    private var classificationRow: some View {
+        HStack {
+            Text(photo.displayLabel)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color.ds.textPrimary)
+
+            Spacer()
+
+            if photo.classificationStateValue == .completed {
+                ConfidenceBadge(confidence: photo.classificationConfidence, size: .small)
+            } else if photo.classificationStateValue == .processing {
+                ProgressView()
+                    .scaleEffect(0.6)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var locationRow: some View {
+        if let location = photo.effectiveLocation {
+            LocationLabel(location: location)
+        }
+    }
+
+    @ViewBuilder
+    private var tagsRow: some View {
+        if !photo.tagsArray.isEmpty {
+            HStack(spacing: Spacing.space1 + 2) {
+                ForEach(photo.tagsArray.prefix(3), id: \.objectID) { tag in
+                    Text(tag.displayName)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.ds.secondary)
+                        .padding(.horizontal, Spacing.space2)
+                        .padding(.vertical, 3)
+                        .background(Color.ds.secondary.opacity(Opacity.hover))
+                        .clipShape(Capsule())
+                }
+                if photo.tagsArray.count > 3 {
+                    Text("+\(photo.tagsArray.count - 3)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.ds.textTertiary)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var timestampRow: some View {
+        if let date = photo.createdAt {
+            Text(date, style: .date)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.ds.textTertiary)
+        }
+    }
+}
+
+// MARK: - Grid Card Item (2+ columns)
+
+struct GridCardItem: View {
+    @ObservedObject var photo: PhotoAsset
+    let columns: Int
+    @EnvironmentObject private var library: PhotoLibraryStore
+    @State private var image: Image?
+
+    var body: some View {
+        if columns == 2 {
+            twoColumnCard
+        } else {
+            compactCard
+        }
+    }
+
+    // MARK: - 2-Column Card
+
+    private var twoColumnCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ThumbnailImageView(image: image)
+                .aspectRatio(GridTokens.landscapeAspectRatio, contentMode: .fit)
+                .clipShape(
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: CornerRadius.medium,
+                        bottomLeadingRadius: 0,
+                        bottomTrailingRadius: 0,
+                        topTrailingRadius: CornerRadius.medium
+                    )
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    Text(photo.displayLabel)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.ds.textPrimary)
+                        .lineLimit(1)
+                    Spacer()
+                    if photo.classificationStateValue == .completed {
+                        Circle()
+                            .fill(ConfidenceLevel(confidence: photo.classificationConfidence).color)
+                            .frame(width: 6, height: 6)
+                    }
+                }
+
+                if let location = photo.effectiveLocation {
+                    Text(location)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.ds.textTertiary)
+                        .lineLimit(1)
+                }
+            }
+            .padding(.horizontal, Spacing.space2)
+            .padding(.vertical, Spacing.space2)
+            .background(Color.ds.surface)
+            .clipShape(
+                UnevenRoundedRectangle(
+                    topLeadingRadius: 0,
+                    bottomLeadingRadius: CornerRadius.medium,
+                    bottomTrailingRadius: CornerRadius.medium,
+                    topTrailingRadius: 0
+                )
+            )
+        }
+        .elevation(.low)
+        .loadThumbnail(photo: photo, library: library, image: $image, size: 300)
+    }
+
+    // MARK: - Compact Card (3+ columns)
+
+    private var compactCard: some View {
+        let cornerRadius = columns >= 4 ? CornerRadius.small : CornerRadius.medium
+
+        return ZStack(alignment: .bottomLeading) {
+            ThumbnailImageView(image: image, progressScale: columns >= 4 ? 0.5 : 0.6)
+                .aspectRatio(GridTokens.squareAspectRatio, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+
+            if columns <= 3 {
+                glassLabel
+            }
+        }
+        .loadThumbnail(photo: photo, library: library, image: $image, size: columns >= 4 ? 150 : 200)
+    }
+
+    private var glassLabel: some View {
+        Text(photo.displayLabel)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .padding(.horizontal, Spacing.space1 + 2)
+            .padding(.vertical, 3)
+            .background(.ultraThinMaterial.opacity(0.8))
+            .background(Color.black.opacity(0.2))
+            .clipShape(RoundedRectangle(cornerRadius: Spacing.space1))
+            .padding(Spacing.space1)
+    }
+}
+
+// MARK: - Shared Components
+
+/// Thumbnail image with loading placeholder
+private struct ThumbnailImageView: View {
+    let image: Image?
+    var progressScale: CGFloat = 1.0
+
+    var body: some View {
+        Color.clear
+            .overlay {
+                if let image {
+                    image
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    Rectangle()
+                        .fill(Color.ds.surfaceSecondary)
+                        .overlay {
+                            ProgressView()
+                                .tint(Color.ds.textTertiary)
+                                .scaleEffect(progressScale)
+                        }
+                }
+            }
+            .clipped()
+    }
+}
+
+/// Location label with icon/style based on GPS vs ML prediction
+private struct LocationLabel: View {
+    let location: String
+
+    var body: some View {
+        HStack(spacing: Spacing.space1) {
+            if location.hasPrefix("\u{2728}") {
+                Text(location)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.ds.aiPrimary)
+            } else {
+                Image(systemName: "mappin.circle.fill")
+                    .font(.system(size: IconSize.tiny))
+                    .foregroundStyle(Color.ds.info)
+                Text(location)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.ds.textSecondary)
+            }
+        }
+    }
+}
+
+// MARK: - Thumbnail Loading Modifier
+
+private struct ThumbnailLoader: ViewModifier {
+    @ObservedObject var photo: PhotoAsset
+    @ObservedObject var library: PhotoLibraryStore
+    @Binding var image: Image?
+    let size: Int
+
+    func body(content: Content) -> some View {
+        content
+            .task(id: photo.fileName) {
+                guard !Task.isCancelled else { return }
+                let cgSize = CGSize(width: size, height: size)
+                if let platformImage = await library.thumbnail(for: photo, size: cgSize) {
+                    guard !Task.isCancelled else { return }
+                    image = Image(platformImage: platformImage)
+                }
+            }
+    }
+}
+
+extension View {
+    func loadThumbnail(photo: PhotoAsset, library: PhotoLibraryStore, image: Binding<Image?>, size: Int) -> some View {
+        modifier(ThumbnailLoader(photo: photo, library: library, image: image, size: size))
+    }
+}
+
 // MARK: - Photo Import Button
 
 struct PhotoImportButton: View {
@@ -359,100 +673,3 @@ struct PhotoImportButton: View {
         }
     }
 }
-
-// MARK: - Dynamic Floating Action Button (iOS)
-
-#if os(iOS)
-struct DynamicFAB: View {
-    let isExpanded: Bool
-
-    private let collapsedSize: CGFloat = 48
-    private let expandedHeight: CGFloat = 40
-
-    var body: some View {
-        HStack(spacing: Spacing.space2) {
-            Image(systemName: "plus")
-                .font(.system(size: IconSize.medium, weight: .semibold))
-                .foregroundStyle(Color.ds.textOnAccent)
-
-            if isExpanded {
-                Text("Add")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Color.ds.textOnAccent)
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .move(edge: .trailing)),
-                        removal: .opacity.combined(with: .move(edge: .trailing))
-                    ))
-            }
-        }
-        .padding(.horizontal, isExpanded ? Spacing.space5 : 0)
-        .frame(
-            width: isExpanded ? nil : collapsedSize,
-            height: isExpanded ? expandedHeight : collapsedSize
-        )
-        .background(
-            LinearGradient(
-                colors: [Color.ds.secondary, Color.ds.secondaryVariant],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .clipShape(isExpanded ? AnyShape(Capsule()) : AnyShape(Circle()))
-        .shadow(color: Color.ds.secondary.opacity(0.4), radius: 12, x: 0, y: 6)
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-        .animation(Motion.spring(), value: isExpanded)
-        .accessibilityLabel("Add photos")
-        .accessibilityHint("Double tap to import photos")
-    }
-}
-
-// MARK: - AnyShape Helper
-
-struct AnyShape: Shape {
-    private let path: (CGRect) -> Path
-
-    init<S: Shape>(_ shape: S) {
-        path = { rect in
-            shape.path(in: rect)
-        }
-    }
-
-    func path(in rect: CGRect) -> Path {
-        path(rect)
-    }
-}
-#endif
-
-// MARK: - Reclassify All Button (macOS)
-
-#if os(macOS)
-struct ReclassifyAllButton: View {
-    let isReclassifying: Bool
-    let isDisabled: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: Spacing.space1) {
-                if isReclassifying {
-                    ProgressView()
-                        .scaleEffect(0.7)
-                        .frame(width: 14, height: 14)
-                } else {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 12, weight: .medium))
-                }
-                Text("Reclassify All")
-                    .font(.system(size: 12, weight: .medium))
-            }
-            .foregroundStyle(isReclassifying ? Color.ds.textTertiary : Color.ds.secondary)
-            .padding(.horizontal, Spacing.space3)
-            .padding(.vertical, Spacing.space2)
-            .background(Color.ds.surfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
-        }
-        .buttonStyle(.plain)
-        .disabled(isDisabled || isReclassifying)
-    }
-}
-#endif

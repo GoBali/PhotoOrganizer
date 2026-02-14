@@ -517,7 +517,7 @@ final class PhotoLibraryStore: ObservableObject {
     @Published var lastError: String?
     @Published var searchText = ""
     @Published var selectedCategory = "All"
-    @Published var gridColumns: Int = 4  // 그리드 컬럼 수 (2~6)
+    @Published var gridColumns: Int = 1  // 그리드 컬럼 수 (1~4 iOS, 1~6 macOS)
 
     // Import progress tracking
     @Published var importProgress: ImportProgress = .idle
