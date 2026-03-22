@@ -363,8 +363,8 @@ struct PhotoDetailView: View {
                 tagsSection
             }
 
-            // Notes Section (확장 상태만)
-            if state == .expanded {
+            // Notes Section (half 이상에서 렌더링, 스크롤로 노출)
+            if state != .collapsed {
                 notesSection
             }
         }
@@ -814,9 +814,14 @@ struct LiquidGlassBottomSheet<Content: View>: View {
 
     @State private var dragOffset: CGFloat = 0
     @State private var isDragging = false
+    @State private var hasTriggeredStateChange = false
+    @State private var overscrollOffset: CGFloat = 0
 
     private let minHeight: CGFloat = 120
     private let grabHandleHeight: CGFloat = 20
+    private let overscrollDampFactor: CGFloat = 0.4
+    private let overscrollMaxPreview: CGFloat = 100
+    private let overscrollSnapThreshold: CGFloat = 60
 
     var body: some View {
         GeometryReader { geometry in
@@ -841,10 +846,71 @@ struct LiquidGlassBottomSheet<Content: View>: View {
                     content(state)
                         .padding(.horizontal, Spacing.space4)
                         .padding(.bottom, Spacing.space6)
+                        .background(
+                            GeometryReader { contentGeometry in
+                                let frame = contentGeometry.frame(in: .named("sheetScroll"))
+                                Color.clear
+                                    .onChange(of: frame.minY) { _, newMinY in
+                                        guard state != .collapsed else { return }
+
+                                        let visibleHeight = max(minHeight, height(for: state, screenHeight: geometry.size.height)) - grabHandleHeight
+                                        let contentHeight = frame.height
+                                        let maxScrollOffset = max(0, contentHeight - visibleHeight)
+
+                                        let topOverscroll = max(0, newMinY)
+                                        let bottomOverscroll = max(0, -newMinY - maxScrollOffset)
+
+                                        if !hasTriggeredStateChange {
+                                            if bottomOverscroll > 0 && state == .half {
+                                                // 아래로 오버스크롤 → 시트 확장 프리뷰
+                                                overscrollOffset = min(bottomOverscroll * overscrollDampFactor, overscrollMaxPreview)
+
+                                                if bottomOverscroll > overscrollSnapThreshold {
+                                                    hasTriggeredStateChange = true
+                                                    withAnimation(Motion.sheetSnap()) {
+                                                        overscrollOffset = 0
+                                                        state = .expanded
+                                                    } completion: {
+                                                        hasTriggeredStateChange = false
+                                                    }
+                                                    HapticStyle.medium.trigger()
+                                                }
+                                            } else if topOverscroll > 0 && state != .collapsed {
+                                                // 위로 오버스크롤 → 시트 축소 프리뷰
+                                                overscrollOffset = -min(topOverscroll * overscrollDampFactor, overscrollMaxPreview)
+
+                                                if topOverscroll > overscrollSnapThreshold {
+                                                    hasTriggeredStateChange = true
+                                                    withAnimation(Motion.sheetSnap()) {
+                                                        overscrollOffset = 0
+                                                        switch state {
+                                                        case .expanded: state = .half
+                                                        case .half: state = .collapsed
+                                                        case .collapsed: break
+                                                        }
+                                                    } completion: {
+                                                        hasTriggeredStateChange = false
+                                                    }
+                                                    HapticStyle.medium.trigger()
+                                                }
+                                            } else {
+                                                // 오버스크롤 영역 밖 → 리셋
+                                                if overscrollOffset != 0 {
+                                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                                        overscrollOffset = 0
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                            }
+                        )
                 }
+                .scrollBounceBehavior(.always)
+                .coordinateSpace(name: "sheetScroll")
                 .scrollDisabled(state == .collapsed)
             }
-            .frame(height: max(minHeight, currentHeight - dragOffset))
+            .frame(height: max(minHeight, currentHeight - dragOffset + overscrollOffset))
             .frame(maxWidth: .infinity)
             .background(glassBackground)
             .clipShape(
@@ -869,7 +935,7 @@ struct LiquidGlassBottomSheet<Content: View>: View {
             }
             .shadow(color: Color.black.opacity(0.15), radius: 20, x: 0, y: -10)
             .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: -2)
-            .offset(y: screenHeight - max(minHeight, currentHeight - dragOffset))
+            .offset(y: screenHeight - max(minHeight, currentHeight - dragOffset + overscrollOffset))
             .gesture(dragGesture(screenHeight: screenHeight))
             .animation(isDragging ? nil : Motion.sheetSnap(), value: state)
             .animation(isDragging ? nil : Motion.sheetSnap(), value: dragOffset)

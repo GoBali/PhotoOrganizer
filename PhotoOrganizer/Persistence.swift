@@ -1084,17 +1084,26 @@ final class VisionImageClassifier: @unchecked Sendable {
     private static let logger = Logger(subsystem: "PhotoOrganizer", category: "VisionImageClassifier")
     private static let classificationQueue = DispatchQueue(label: "com.photoorganizer.classification", qos: .userInitiated)
 
+    /// Apple 분류 체계의 최상위 부모 카테고리 (구체적 의미 부족)
+    static let umbrellaLabels: Set<String> = [
+        "outdoor", "indoor", "people", "adult", "material",
+        "sky", "land", "water", "food_and_drink",
+        "animal", "plant", "recreation", "sport"
+    ]
+
     func classify(image: PlatformImage) async throws -> ClassificationResult {
         guard let cgImage = image.cgImageRepresentation else {
             throw VisionClassifierError.invalidImage
         }
+
+        let orientation = image.cgImageOrientation
 
         return try await withCheckedThrowingContinuation { continuation in
             let safeContinuation = SafeContinuation(continuation)
 
             // 전용 큐에서 실행하여 handler/request가 완료될 때까지 유지
             Self.classificationQueue.async {
-                let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+                let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: [:])
                 let request = VNClassifyImageRequest()
 
                 // Simulator/macOS에서는 Neural Engine이 없으므로 CPU만 사용
@@ -1106,11 +1115,19 @@ final class VisionImageClassifier: @unchecked Sendable {
                     try handler.perform([request])
 
                     // perform이 동기적으로 완료된 후 결과 처리
-                    guard let results = request.results,
-                          let topResult = results.first else {
+                    guard let results = request.results, !results.isEmpty else {
                         safeContinuation.resume(throwing: VisionClassifierError.noResults)
                         return
                     }
+
+                    // 최고 confidence 근처(1% 이내)의 결과들에서 umbrella 라벨 제외
+                    let maxConf = results[0].confidence
+                    let threshold = maxConf * 0.99  // 1% tolerance
+                    let topBand = results.prefix(while: { $0.confidence >= threshold })
+
+                    // umbrella 라벨 제외하고 가장 구체적인 라벨 선택
+                    let specific = topBand.first(where: { !Self.umbrellaLabels.contains($0.identifier) })
+                    let topResult = specific ?? results[0]
 
                     Self.logger.info("Classification: \(topResult.identifier) (\(topResult.confidence))")
                     safeContinuation.resume(returning: ClassificationResult(
@@ -1137,11 +1154,13 @@ final class VisionLocationClassifier: @unchecked Sendable {
             throw LocationClassifierError.invalidImage
         }
 
+        let orientation = image.cgImageOrientation
+
         return try await withCheckedThrowingContinuation { continuation in
             let safeContinuation = SafeContinuation(continuation)
 
             Self.classificationQueue.async {
-                let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+                let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: [:])
                 let request = VNClassifyImageRequest()
 
                 #if targetEnvironment(simulator) || os(macOS)

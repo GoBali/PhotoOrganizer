@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Linear 설정
+- team: GoBali
+- project: PhotoOrganizer
+
 ## Communication
 - **모든 답변은 한국어로 작성합니다.**
 
